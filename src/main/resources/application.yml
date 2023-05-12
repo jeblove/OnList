@@ -1,0 +1,11 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost
+      database: test
+#      username:
+#      password:
+      port: 27017
+mybatis:
+  type-aliases-package: com.jeblove.onlyList.entity
+  mapper-locations: classpath:/mapper/*.xml
