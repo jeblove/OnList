@@ -1,21 +1,26 @@
 package com.jeblove.onlyList.service;
 
 import com.jeblove.onlyList.common.Result;
+import com.mongodb.client.gridfs.GridFSBucket;
+import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author : Jeb
@@ -31,6 +36,9 @@ public class FileService {
 
     @Autowired
     private GridFsTemplate gridFsTemplate;
+
+    @Autowired
+    private GridFSBucket gridFSBucket;
 
     /**
      * 获取文件信息
@@ -97,8 +105,43 @@ public class FileService {
         return result;
     }
 
-
-
-
+    /**
+     * 文件下载
+     * @param id 需要下载文件的id
+     * @return 返回ResponseEntity类型的字节流
+     * @throws IOException
+     */
+    public ResponseEntity<StreamingResponseBody> downloadFileById(String id) throws IOException{
+        GridFSFile  gridFSFile = gridFsTemplate.findOne(new Query(Criteria.where("_id").is(id)));
+        ResponseEntity responseEntity;
+        if (gridFSFile==null){
+//            返回404
+            responseEntity = ResponseEntity.notFound().build();
+        }else{
+//            打开下载流对象
+            GridFSDownloadStream gridFSDownloadStream = gridFSBucket.openDownloadStream(gridFSFile.getObjectId());
+//            创建resource，用于获取流对象
+            GridFsResource resource = new GridFsResource(gridFSFile, gridFSDownloadStream);
+//            获取流中的数据
+            StreamingResponseBody streamingResponseBody = outputStream -> {
+                IOUtils.copy(resource.getInputStream(), outputStream);
+            };
+            /**
+             * HttpHeaders:
+             *  CONTENT_TYPE 指示如何响应内容的格式
+             *  CONTENT_DISPOSITION 指示如何处理响应内容
+             *      inline 直接在页面显示
+             *      attachment 以附件形式下载
+             *
+             * MediaType:
+             *  APPLICATION_OCTET_STREAM 告知浏览器是字节流，浏览器处理字节流默认方式是下载
+             */
+            responseEntity = ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename="+gridFSFile.getFilename())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(streamingResponseBody);
+        }
+        return responseEntity;
+    }
 
 }

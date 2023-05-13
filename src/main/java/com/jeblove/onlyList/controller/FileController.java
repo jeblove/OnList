@@ -3,16 +3,14 @@ package com.jeblove.onlyList.controller;
 import com.jeblove.onlyList.common.Result;
 import com.jeblove.onlyList.service.FileService;
 import com.mongodb.client.gridfs.model.GridFSFile;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author : Jeb
@@ -52,5 +50,11 @@ public class FileController {
     @RequestMapping("deleteFileById")
     public Result deleteFileById(String id){
         return fileService.deleteFileById(id);
+    }
+
+    @RequestMapping("downloadFileById")
+    public ResponseEntity<StreamingResponseBody> downloadFileById(String id) throws IOException {
+        return fileService.downloadFileById(id);
+
     }
 }
