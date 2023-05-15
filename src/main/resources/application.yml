@@ -6,6 +6,12 @@ spring:
 #      username:
 #      password:
       port: 27017
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1GB     # 单个文件大小
+      max-request-size: 4GB   # 总文件的上传大小
+
 mybatis:
   type-aliases-package: com.jeblove.onlyList.entity
   mapper-locations: classpath:/mapper/*.xml

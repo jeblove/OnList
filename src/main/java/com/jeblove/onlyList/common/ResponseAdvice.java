@@ -8,7 +8,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 /**
@@ -48,5 +51,16 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
         return Result.success(o);
+    }
+
+    /**
+     * 捕获【文件上传大小超出限制】异常
+     * @param e
+     * @return 返回失败结果
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result uploadResult(Exception e){
+        System.out.println(e.getMessage());
+        return Result.error(500, "上传失败，文件大小超出限制");
     }
 }

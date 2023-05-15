@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,15 +71,20 @@ public class FileService {
 
     /**
      * 上传文件到数据库
-     * @param inputStream 文件流
+     * @param multipartFile 文件
      * @param fileName 文件名
      * @return 成功则返回文件id
      * @throws IOException
      */
-    public Result storeFile(InputStream inputStream, String fileName) throws IOException {
-        ObjectId objectId = gridFsTemplate.store(inputStream, fileName);
+    public Result storeFile(MultipartFile multipartFile, String fileName) throws Exception {
+        InputStream inputStream = multipartFile.getInputStream();
+        ObjectId objectId = null;
+
+        objectId = gridFsTemplate.store(inputStream, fileName);
+        System.out.println(objectId);
+
         Result result;
-        if (objectId.toString().equals("")|| objectId.toString() == null){
+        if (objectId.toString().equals("") || objectId.toString() == null || objectId == null){
             result = Result.error(500,"上传失败");
         }else{
             result = Result.success(objectId.toString());

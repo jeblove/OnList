@@ -41,10 +41,10 @@ public class FileController {
     }
 
     @RequestMapping("upload")
-    public Result uploadFile(MultipartFile uploadFile) throws IOException {
+    public Result uploadFile(MultipartFile uploadFile) throws Exception {
         System.out.println(uploadFile.getOriginalFilename()+uploadFile.getSize());
         // .getName():uploadFile  getOriginalFilename():文件名.xxx
-        return fileService.storeFile(uploadFile.getInputStream(), uploadFile.getOriginalFilename());
+        return fileService.storeFile(uploadFile, uploadFile.getOriginalFilename());
     }
 
     @RequestMapping("deleteFileById")
