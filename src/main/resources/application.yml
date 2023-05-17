@@ -2,7 +2,8 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost
-      database: test
+#      database: test
+      database: onList
 #      username:
 #      password:
       port: 27017
