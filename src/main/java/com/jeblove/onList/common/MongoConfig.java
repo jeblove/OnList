@@ -1,4 +1,4 @@
-package com.jeblove.onlyList.common;
+package com.jeblove.onList.common;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;

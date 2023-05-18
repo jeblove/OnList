@@ -1,6 +1,6 @@
-package com.jeblove.onlyList.service;
+package com.jeblove.onList.service;
 
-import com.jeblove.onlyList.common.Result;
+import com.jeblove.onList.common.Result;
 import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.model.GridFSFile;

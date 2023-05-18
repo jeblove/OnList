@@ -1,8 +1,8 @@
-package com.jeblove.onlyList;
+package com.jeblove.onList;
 
-import com.jeblove.onlyList.entity.User;
-import com.jeblove.onlyList.entity.VirtualFolder;
-import com.jeblove.onlyList.service.*;
+import com.jeblove.onList.entity.User;
+import com.jeblove.onList.entity.VirtualFolder;
+import com.jeblove.onList.service.*;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

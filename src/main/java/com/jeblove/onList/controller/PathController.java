@@ -1,7 +1,7 @@
-package com.jeblove.onlyList.controller;
+package com.jeblove.onList.controller;
 
-import com.jeblove.onlyList.entity.Path;
-import com.jeblove.onlyList.service.PathService;
+import com.jeblove.onList.entity.Path;
+import com.jeblove.onList.service.PathService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

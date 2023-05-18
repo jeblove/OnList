@@ -1,7 +1,7 @@
-package com.jeblove.onlyList.controller;
+package com.jeblove.onList.controller;
 
-import com.jeblove.onlyList.common.Result;
-import com.jeblove.onlyList.service.FileService;
+import com.jeblove.onList.common.Result;
+import com.jeblove.onList.service.FileService;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

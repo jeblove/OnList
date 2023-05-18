@@ -1,7 +1,7 @@
-package com.jeblove.onlyList.controller;
+package com.jeblove.onList.controller;
 
-import com.jeblove.onlyList.entity.FileLink;
-import com.jeblove.onlyList.service.FileLinkService;
+import com.jeblove.onList.entity.FileLink;
+import com.jeblove.onList.service.FileLinkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

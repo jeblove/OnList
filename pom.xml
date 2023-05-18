@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.jeblove</groupId>
-    <artifactId>onlyList</artifactId>
+    <artifactId>onList</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>onlyList</name>
     <description>onlyList</description>

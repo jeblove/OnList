@@ -1,4 +1,4 @@
-package com.jeblove.onlyList.common;
+package com.jeblove.onList.common;
 
 /**
  * @author : Jeb

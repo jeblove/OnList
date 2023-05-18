@@ -1,4 +1,4 @@
-package com.jeblove.onlyList.common;
+package com.jeblove.onList.common;
 
 import lombok.Data;
 

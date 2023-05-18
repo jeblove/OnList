@@ -1,11 +1,8 @@
-package com.jeblove.onlyList.entity;
+package com.jeblove.onList.entity;
 
-import lombok.Data;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-import org.springframework.data.mongodb.core.mapping.MongoId;
 
 
 import java.io.Serializable;
