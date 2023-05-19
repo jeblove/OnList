@@ -16,3 +16,7 @@ spring:
 mybatis:
   type-aliases-package: com.jeblove.onlyList.entity
   mapper-locations: classpath:/mapper/*.xml
+
+fileLink:
+  hashType: MD5
+  fileLinkPath: mongodb_onList
