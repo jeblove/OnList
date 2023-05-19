@@ -2,7 +2,7 @@ package com.jeblove.onList.entity;
 
 import lombok.Data;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Map;
 
 /**
  * @author : Jeb
@@ -18,5 +18,5 @@ public class FileLink implements Serializable {
     private String hashType;
     private String path;
     private Integer linkNum;
-    private List<String> linkUserArray;
+    private Map<String, Integer> linkUserMap;
 }
