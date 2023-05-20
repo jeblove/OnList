@@ -25,7 +25,7 @@ public class UserController {
     }
 
     @RequestMapping("register")
-    public String register(User user){
+    public String register(User user) throws Exception {
         return userService.register(user);
     }
 }

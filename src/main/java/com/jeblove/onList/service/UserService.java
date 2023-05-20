@@ -1,16 +1,19 @@
 package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.Result;
+import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author : Jeb
@@ -22,6 +25,13 @@ import java.util.Date;
 public class UserService {
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    private PathService pathService;
+
+    @Value("${fileLink.init.filename}")
+    private String initFilename;
+    @Value("${fileLink.init.fileLinkId}")
+    private String initFileLinkId;
 
     /**
      * 获取用户信息
@@ -44,15 +54,25 @@ public class UserService {
         return result;
     }
 
-    public String register(User user){
+    public String register(User user) throws Exception{
         // 待判断
         // 时间
-        LocalDateTime currentTime = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formattedTime = currentTime.format(formatter);
-        user.setSignUpTime(formattedTime);
+//        LocalDateTime currentTime = LocalDateTime.now();
+//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//        String formattedTime = currentTime.format(formatter);
+//        user.setSignUpTime(formattedTime);
 
-        // 用户home目录
+        Date date = Date.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+        user.setSignUpTime(date);
+
+        // 用户home目录，并添加初始文件
+        Path path = pathService.insertPath(initFilename, initFileLinkId);
+        user.setPathId(path.getId());
+
+        // 权限
+        Map<String, Object> permissions = new HashMap<>();
+        permissions.put("disabled",0);
+        user.setPermissions(permissions);
 
         User insert = mongoTemplate.insert(user);
         System.out.println(insert);

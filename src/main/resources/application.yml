@@ -20,3 +20,6 @@ mybatis:
 fileLink:
   hashType: MD5
   fileLinkPath: mongodb_onList
+  init:
+    filename: readme.txt
+    fileLinkId: 64687b34528db6326f81d406
