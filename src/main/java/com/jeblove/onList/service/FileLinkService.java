@@ -1,6 +1,8 @@
 package com.jeblove.onList.service;
 
+import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -116,6 +118,28 @@ public class FileLinkService {
         return mongoTemplate.findOne(new Query(Criteria.where("hashCode").is(hashCode)), FileLink.class);
     }
 
+    /**
+     * 删除fileLink
+     * @param hashCode 文件哈希码
+     * @return 删除条数
+     */
+    public long deleteFileLink(String hashCode){
+        DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("hashCode").is(hashCode)), FileLink.class);
+        return deleteResult.getDeletedCount();
+    }
 
+    /**
+     * 更新fileLink的linkNum和linkUserArray
+     * @param hashCode 文件哈希码
+     * @param linkNum 总链接数
+     * @param linkUserMap 用户链接
+     * @return 修改条数
+     */
+    public long updateFileLinkNum(String hashCode, Integer linkNum, Map<String, Integer> linkUserMap){
+        Query query = new Query(Criteria.where("hashCode").is(hashCode));
+        Update update = new Update().set("linkNum", linkNum).set("linkUserMap", linkUserMap);
+        UpdateResult updateResult = mongoTemplate.updateFirst(query, update, FileLink.class);
+        return updateResult.getModifiedCount();
+    }
 
 }
