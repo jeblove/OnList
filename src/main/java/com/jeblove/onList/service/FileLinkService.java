@@ -24,6 +24,8 @@ import java.util.Map;
 public class FileLinkService {
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    private FileService fileService;
 
     /**
      * 查询所有
@@ -119,7 +121,8 @@ public class FileLinkService {
     }
 
     /**
-     * 删除fileLink
+     * 删除整个fileLink文档
+     * 面向其它服务
      * @param hashCode 文件哈希码
      * @return 删除条数
      */
@@ -140,6 +143,45 @@ public class FileLinkService {
         Update update = new Update().set("linkNum", linkNum).set("linkUserMap", linkUserMap);
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, FileLink.class);
         return updateResult.getModifiedCount();
+    }
+
+    /**
+     * 删除链接文件
+     * 无链接再删除文件
+     * @param fileLinkId 文件链接id
+     * @param username   删除文件用户
+     * @return data删除条数
+     */
+    public Result deleteFileLinkUpdate(String fileLinkId, String username){
+        // 先删除用户num
+        FileLink fileLink = getFileLinkById(fileLinkId);
+        Map<String, Integer> linkUserMap = fileLink.getLinkUserMap();
+        Integer num = linkUserMap.get(username);
+        Result result;
+        if(num==null){
+            // 该用户没有该文件
+            result = Result.error(404,"没有该文件");
+        }else {
+            long count;
+            if (num > 1) {
+                linkUserMap.put(username, num - 1);
+            } else {
+                // 该用户链接数为0，删除该用户username
+                linkUserMap.remove(username);
+            }
+            Integer linkNum = fileLink.getLinkNum();
+            if (linkNum > 1) {
+                fileLink.setLinkNum(linkNum - 1);
+                count = updateFileLinkNum(fileLink.getHashCode(), fileLink.getLinkNum(), linkUserMap);
+            } else {
+                // 没有其它链接，删除链接文件记录
+                count = deleteFileLink(fileLink.getHashCode());
+                // 删除文件
+                fileService.deleteFileById(fileLink.getFileId());
+            }
+            result = Result.success(count);
+        }
+        return result;
     }
 
 }
