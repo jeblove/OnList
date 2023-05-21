@@ -10,13 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author : Jeb
@@ -64,7 +64,7 @@ public class FileController {
      * @throws Exception
      */
     @RequestMapping("upload")
-    public Result uploadFile(MultipartFile uploadFile, String username) throws Exception {
+    public Result uploadFile(MultipartFile uploadFile, String username, @RequestParam List<String> pathList) throws Exception {
         System.out.println(uploadFile.getOriginalFilename()+" 文件大小："+uploadFile.getSize());
         // .getName():uploadFile  getOriginalFilename():文件名.xxx
         String fileLinkId;
@@ -94,48 +94,13 @@ public class FileController {
         HashMap<String, String> map = new HashMap<>();
         map.put("fileLinkId",fileLinkId);
         map.put("msg",msg);
+
+        // 添加fileLinkId到指定目录
+
+
         return Result.success(map);
     }
 
-    /**
-     * 删除链接文件
-     * 无链接再删除文件
-     * @param fileLinkId 文件链接id
-     * @param username 删除文件用户
-     * @return data删除条数
-     */
-    @RequestMapping("deleteFileByFileLinkId")
-    public Result deleteFile(String fileLinkId, String username){
-        // 先删除用户num
-        FileLink fileLink = fileLinkService.getFileLinkById(fileLinkId);
-        Map<String, Integer> linkUserMap = fileLink.getLinkUserMap();
-        Integer num = linkUserMap.get(username);
-        Result result;
-        if(num==null){
-            // 该用户没有该文件
-            result = Result.error(404,"没有该文件");
-        }else {
-            long count;
-            if (num > 1) {
-                linkUserMap.put(username, num - 1);
-            } else {
-                // 该用户链接数为0，删除该用户username
-                linkUserMap.remove(username);
-            }
-            Integer linkNum = fileLink.getLinkNum();
-            if (linkNum > 1) {
-                fileLink.setLinkNum(linkNum - 1);
-                count = fileLinkService.updateFileLinkNum(fileLink.getHashCode(), fileLink.getLinkNum(), linkUserMap);
-            } else {
-                // 没有其它链接，删除链接文件记录
-                count = fileLinkService.deleteFileLink(fileLink.getHashCode());
-                // 删除文件
-                fileService.deleteFileById(fileLink.getFileId());
-            }
-            result = Result.success(count);
-        }
-        return result;
-    }
 
     /**
      * 实际删除file文件
