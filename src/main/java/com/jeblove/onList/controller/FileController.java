@@ -1,13 +1,11 @@
 package com.jeblove.onList.controller;
 
-import com.jeblove.onList.common.FileCheckHashUtil;
 import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.service.FileLinkService;
 import com.jeblove.onList.service.FileService;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -31,11 +28,6 @@ public class FileController {
     private FileService fileService;
     @Autowired
     private FileLinkService fileLinkService;
-
-    @Value("${fileLink.hashType}")
-    private String hashType;
-    @Value("${fileLink.fileLinkPath}")
-    private String fileLinkPath;
 
     /**
      * 获取fs.file文件信息
@@ -55,52 +47,6 @@ public class FileController {
     public List<GridFSFile> getFileList(){
         return fileService.getFileList();
     }
-
-    /**
-     * 文件上传
-     * @param uploadFile 文件
-     * @param username 上传用户
-     * @return data.fileLinkId 文件链接id
-     * @throws Exception
-     */
-    @RequestMapping("upload")
-    public Result uploadFile(MultipartFile uploadFile, String username, @RequestParam List<String> pathList) throws Exception {
-        System.out.println(uploadFile.getOriginalFilename()+" 文件大小："+uploadFile.getSize());
-        // .getName():uploadFile  getOriginalFilename():文件名.xxx
-        String fileLinkId;
-        String msg;
-
-        // 检测md5
-        String hashCode = FileCheckHashUtil.getHashCode(uploadFile);
-        // 已存在检测
-        if(!fileLinkService.fileLinkExists(hashType, hashCode)){
-            // False: 文件不存在，则上传文件
-            Result fileResult = fileService.storeFile(uploadFile, uploadFile.getOriginalFilename());
-            String fileId = (String) fileResult.getData();
-
-            System.out.println(fileLinkPath);
-            // 添加FileLInk记录
-            FileLink fileLink = fileLinkService.insertFileLink(fileId, hashType, hashCode, fileLinkPath, username);
-            fileLinkId = fileLink.getId();
-            msg = "文件不存在";
-        }else{
-            // True: 文件存在，查询链接，返回linkId
-            FileLink fileLink = fileLinkService.findFileLinkByHashCode(hashCode);
-            fileLinkId = fileLink.getId();
-            // 添加链接数和用户名
-            fileLinkService.appendFileLink(hashCode, username);
-            msg = "文件已存在";
-        }
-        HashMap<String, String> map = new HashMap<>();
-        map.put("fileLinkId",fileLinkId);
-        map.put("msg",msg);
-
-        // 添加fileLinkId到指定目录
-
-
-        return Result.success(map);
-    }
-
 
     /**
      * 实际删除file文件
@@ -133,5 +79,33 @@ public class FileController {
     @RequestMapping("downloadFileById")
     public ResponseEntity<StreamingResponseBody> downloadFileById(String id) throws IOException {
         return fileService.downloadFileById(id);
+    }
+
+    /**
+     * 上传文件
+     * api
+     * @param uploadFile 文件
+     * @param userId 用户id
+     * @param pathList 所在目录的列表
+     * @return data.fileLinkId 文件链接id
+     * @throws Exception
+     */
+    @RequestMapping("upload")
+    public Result uploadFile(MultipartFile uploadFile, String userId, @RequestParam List<String> pathList) throws Exception {
+        return fileService.uploadFile(uploadFile, userId, pathList);
+    }
+
+
+    /**
+     * 删除文件
+     * api
+     * @param userId 用户id
+     * @param filename 文件名
+     * @param pathList 所在目录（不包含）
+     * @return code 200:成功 500失败
+     */
+    @RequestMapping("deleteFile")
+    public Result deleteFile(String userId, String filename,@RequestParam List<String> pathList){
+        return fileService.deleteFile(userId, filename, pathList);
     }
 }
