@@ -1,5 +1,6 @@
 package com.jeblove.onList.service;
 
+import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.Path;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -148,9 +149,23 @@ public class PathService {
      * @param pathList 创建目录路径的列表（不含创建名）
      * @return 修改数
      */
-    public long createDir(String pathId, String folderName, List<String> pathList){
+    public Result createDir(String pathId, String folderName, List<String> pathList){
+        Result result;
+        // 判断是否跨文件夹
+        Path path = mongoTemplate.findOne(new Query(Criteria.where("_id").is(pathId)), Path.class);
+        // 排除根目录
+        if(pathList.size()!=0){
+            // 非空目录，则检测父目录是否正常
+            if(getNodeByIdAPath(path, pathList)==null){
+                System.out.println("pathService,createDir");
+                return Result.error(500, "父目录异常");
+            }
+        }
+
         long modifiedCount = createFile(folderName, pathList, pathId, 1, "", "");
-        return modifiedCount;
+        result = Result.success(modifiedCount);
+
+        return result;
     }
 
     /**
@@ -173,7 +188,7 @@ public class PathService {
     /**
      * 添加链接文件到指定目录
      * @param pathId 路径id
-     * @param filename 文件名
+     * @param filename 文件名（包含后缀）
      * @param fileLinkId 文件链接id
      * @param pathList 所在路径（不包含）
      * @return 修改条数
@@ -195,8 +210,10 @@ public class PathService {
      */
     public Path.Node getNodeByIdAPath(Path path, List<String> pathList) {
         // 防止传递空字符串[""]列表
-        if(pathList.get(0).equals("")){
-            pathList.remove(0);
+        if(pathList.size()!=0){
+            if(pathList.get(0).equals("")){
+                pathList.remove(0);
+            }
         }
         Boolean isNull = false;
 
@@ -245,6 +262,9 @@ public class PathService {
         Query query = new Query(Criteria.where("_id").is(pathId));
         Path path = mongoTemplate.findOne(query, Path.class);
         Path.Node node = getNodeByIdAPath(path, newPathList);
+        if(node==null){
+            return null;
+        }
 
         // 不是文件夹
         if(node.getSuffix().length()!=0){
@@ -270,6 +290,5 @@ public class PathService {
         }
         return result;
     }
-
 
 }
