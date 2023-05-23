@@ -2,6 +2,7 @@ package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.Path;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -410,4 +411,50 @@ public class PathService {
         return resultMap;
     }
 
+    /**
+     * 遍历整个根目录检测文件记录fileLinkId
+     * 递归调用遍历方法，列表的引用（地址）
+     * @param path 路径对象
+     * @param fileLinkIdList 记录fileLinkId列表
+     */
+    private static void traverseRootPath(Path path, List<String> fileLinkIdList) {
+        Map<String, Path.Node> content = path.getContent();
+
+        content.forEach((nodeKey, nodeValue) -> {
+            // 文件则记录
+            if(nodeValue.getType() == 0) {
+                fileLinkIdList.add(nodeValue.getFileLinkId());
+            }
+            // 文件夹则继续遍历
+            else if(nodeValue.getType() == 1) {
+                traverseFolder(nodeValue, fileLinkIdList);
+            }
+        });
+    }
+
+    /**
+     * 删除path文档
+     * @param pathId 路径id
+     * @param username 所属用户的用户名
+     * @return 0则失败，其它成功
+     */
+    public long removePath(String pathId, String username){
+        // 遍历根目录
+        Path path = findById(pathId);
+        List<String> fileLinkIdList = new ArrayList<>();
+        traverseRootPath(path, fileLinkIdList);
+        System.out.println(fileLinkIdList);
+        // 更新fileLink
+        if(fileLinkIdList.size()>1){
+            for (String fileLinkId : fileLinkIdList) {
+                int code = fileLinkService.deleteFileLinkUpdate(fileLinkId, username).getCode();
+                if(code != 200){
+                    return 0;
+                }
+            }
+        }
+        DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(pathId)), Path.class);
+        return deleteResult.getDeletedCount();
+
+    }
 }

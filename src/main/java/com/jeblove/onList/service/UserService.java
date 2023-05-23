@@ -1,10 +1,13 @@
 package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.Result;
+import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
+import com.mongodb.client.result.DeleteResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -27,6 +30,9 @@ public class UserService {
     private MongoTemplate mongoTemplate;
     @Autowired
     private PathService pathService;
+    @Autowired
+    @Lazy
+    private FileLinkService fileLinkService;
 
     @Value("${fileLink.init.filename}")
     private String initFilename;
@@ -69,6 +75,10 @@ public class UserService {
         Path path = pathService.insertPath(initFilename, initFileLinkId);
         user.setPathId(path.getId());
 
+        // 更新fileLink
+        FileLink fileLink = fileLinkService.getFileLinkById(initFileLinkId);
+        fileLinkService.appendFileLink(fileLink.getHashCode(), user.getUsername());
+
         // 权限
         Map<String, Object> permissions = new HashMap<>();
         permissions.put("disabled",0);
@@ -77,6 +87,37 @@ public class UserService {
         User insert = mongoTemplate.insert(user);
         System.out.println(insert);
         return insert.toString();
+    }
+
+    /**
+     * 删除用户
+     * @param id 用户id
+     * @param password 用户密码
+     * @return code：成功则200，失败则502
+     */
+    public Result deleteUser(String id, String password){
+        Result result = Result.error(502, "ID或密码错误");
+        User user = getUser(id);
+        if(user==null){
+            return result;
+        }
+        Result login = login(user.getUsername(), password);
+        if(login.getCode() == 200){
+            DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(id)), User.class);
+            long deletedCount = deleteResult.getDeletedCount();
+            if(deletedCount>0){
+                // 删除用户目录
+                long removePath = pathService.removePath(user.getPathId(), user.getUsername());
+                if(removePath!=0){
+                    result = Result.success(deletedCount);
+                }
+            }
+
+        }else{
+            result = login;
+        }
+        return result;
+
     }
 
 }

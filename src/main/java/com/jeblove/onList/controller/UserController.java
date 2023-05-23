@@ -19,13 +19,36 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    /**
+     * 用户登录
+     * @param username 用户名
+     * @param password 密码
+     * @return 成功：token；失败code 502
+     */
     @RequestMapping("login")
     public Result login(String username, String password){
         return userService.login(username, password);
     }
 
+    /**
+     * 用户注册
+     * @param user 用户信息
+     * @return 用户信息
+     * @throws Exception
+     */
     @RequestMapping("register")
     public String register(User user) throws Exception {
         return userService.register(user);
+    }
+
+    /**
+     * 删除用户
+     * @param id 用户id
+     * @param password 用户密码
+     * @return code：成功则200，失败则502
+     */
+    @RequestMapping("deleteUser")
+    public Result deleteUser(String id, String password){
+        return userService.deleteUser(id, password);
     }
 }
