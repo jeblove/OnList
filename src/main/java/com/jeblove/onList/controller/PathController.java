@@ -63,10 +63,12 @@ public class PathController {
     public Result deleteDir(String userId, String folderName,@RequestParam List<String> pathList){
         User user = userService.getUser(userId);
         String pathId = user.getPathId();
-        long count = pathService.deleteDir(pathId, folderName, pathList);
+        long count = pathService.deleteDir(user.getUsername(), pathId, folderName, pathList);
         Result result = Result.success(count);
         if(count==0){
             result = Result.error(500, "删除失败");
+        } else if (count==-1) {
+            result = Result.error(500, "目录或文件不存在");
         }
         return result;
     }

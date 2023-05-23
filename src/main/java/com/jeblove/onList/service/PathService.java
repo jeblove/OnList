@@ -4,6 +4,7 @@ import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.Path;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -21,6 +22,9 @@ import java.util.*;
 public class PathService {
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    @Lazy
+    private FileLinkService fileLinkService;
 
     public Path findById(String id){
         Query query = new Query(Criteria.where("_id").is(id));
@@ -169,15 +173,40 @@ public class PathService {
     }
 
     /**
-     * 删除文件夹
+     * 删除目录
+     * @param username 用户名
      * @param pathId 路径id
-     * @param folderName 文件夹名
+     * @param folderName 目录名
      * @param pathList 删除目录路径的列表（不含删除名）
      * @return 删除数
      */
-    public long deleteDir(String pathId, String folderName, List<String> pathList){
+    public long deleteDir(String username, String pathId, String folderName, List<String> pathList){
         String dirPath = handleDir(folderName, pathList);
 
+        // 扫描目录下的文件，更新fileLink
+        Map<String, Object> scanFileMap = scanFile(pathId, folderName, pathList);
+
+        Integer count = (Integer) scanFileMap.get("count");
+
+        if(count==-1){
+            // 目录异常
+            return -1;
+        } else if (count==0) {
+            // 没有文件
+        }else{
+            // count为条数
+            List<String> fileLinkIdList = (List<String>) scanFileMap.get("fileLinkIdList");
+            System.out.println("tt,fileLinkIdList:"+fileLinkIdList);
+
+            for (String fileLinkId : fileLinkIdList) {
+                int code = fileLinkService.deleteFileLinkUpdate(fileLinkId, username).getCode();
+                if(code != 200){
+                    return 0;
+                }
+            }
+        }
+
+        // 执行删除目录
         Query query = new Query(Criteria.where("_id").is(pathId));
         Update update = new Update().unset(dirPath);
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
@@ -239,7 +268,7 @@ public class PathService {
         if(isNull){
             node = null;
         }
-        System.out.println(node);
+        System.out.println("node:"+node);
         return node;
     }
 
@@ -289,6 +318,96 @@ public class PathService {
             result = null;
         }
         return result;
+    }
+
+    /**
+     * 遍历检测文件记录fileLinkId
+     * 递归调用遍历方法，列表的引用（地址）
+     * @param node 子节点（内含content）
+     * @param fileLinkIdList 记录fileLinkId列表
+     */
+    private static void traverseFolder(Path.Node node, List<String> fileLinkIdList) {
+        Map<String, Path.Node> nodeContent = node.getContent();
+        nodeContent.forEach((nodeKey, nodeValue) -> {
+            // 文件则记录
+            if(nodeValue.getType() == 0) {
+                fileLinkIdList.add(nodeValue.getFileLinkId());
+            }
+            // 文件夹则继续遍历
+            else if(nodeValue.getType() == 1) {
+                traverseFolder(nodeValue, fileLinkIdList);
+            }
+        });
+    }
+
+    /**
+     * 扫描记录目录下指定文件夹下的文件
+     * @param pathId 路径path的id
+     * @param folderName 目录名
+     * @param pathList 目标路径的列表（不包括）
+     * @return 目录内文件的fileLinkId列表
+     */
+    public Map<String, Object> scanFile(String pathId, String folderName, List<String> pathList){
+        // 确认删除目录路径，扫描该路径下的文件
+        // 删除test，检测test下的content，一层扫描type是否为0，0则addList，
+        List<String> fileLinkIdList = new ArrayList<>();
+        List<String> newPathList = new ArrayList<>(pathList);
+
+        // 防止传递空字符串[""]列表
+        if(newPathList.size()!=0 && newPathList.get(0).equals("")){
+            newPathList.remove(0);
+        }
+
+        Boolean isRoot;
+        // 防止根目录问题
+        if(newPathList.isEmpty()){
+            System.out.println("根目录添加");
+            newPathList.add(folderName);
+            isRoot = true;
+        } else {
+            isRoot = false;
+        }
+
+        Path path = findById(pathId);
+        // 目标路径
+        Path.Node node = getNodeByIdAPath(path, newPathList);
+
+        Map<String, Object> resultMap = new HashMap<>();
+
+        // 目录异常
+        if(node==null){
+            System.out.println("目录异常");
+            resultMap.put("count", -1);
+            return resultMap;
+        }
+
+        // 目标目录
+        Map<String, Path.Node> content = node.getContent();
+
+        // 目录下没有文件
+        if(node.getContent().isEmpty()){
+            resultMap.put("count", 0);
+
+        }else{
+            if(!isRoot){
+                content.forEach((key, value) -> {
+//                    System.out.println("key:"+key+";"+"value:"+value);
+                        // 目标文件夹
+                        if(key.equals(folderName) && (value.getSuffix()==null || "".equals(value.getSuffix()))){
+                            // 遍历子文件夹，调用方法
+                            traverseFolder(value, fileLinkIdList);
+                        }
+                }); // content forEach
+
+            }else{
+                // 根目录，直接开始遍历
+                traverseFolder(node, fileLinkIdList);
+            }
+            resultMap.put("fileLinkIdList", fileLinkIdList);
+            resultMap.put("count", fileLinkIdList.size());
+        }
+        System.out.println("fileLinkIdList:"+fileLinkIdList);
+        return resultMap;
     }
 
 }
