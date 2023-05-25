@@ -455,6 +455,99 @@ public class PathService {
         }
         DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(pathId)), Path.class);
         return deleteResult.getDeletedCount();
-
     }
+
+    /**
+     * 拷贝文件/目录
+     * @param pathId 路径id
+     * @param username 用户名
+     * @param filename 文件名/目录名
+     * @param pathList 当前所在目录（不包含）
+     * @param targetPathList 复制到目标目录（不包含）
+     * @return 修改条数
+     */
+    public long copyAMoveFile(Boolean isMV, String pathId, String username, String filename, List<String> pathList, String newName, List<String> targetPathList){
+        // 原始名
+        Map<String, String> filenameMap = handleSuffix(filename);
+        String suffix = filenameMap.get("suffix");
+        String filenameWithoutSuffix = filenameMap.get("filenameWithoutSuffix");
+
+        // 新名
+        Map<String, String> newFilenameMap = handleSuffix(newName);
+        String suffixNew = newFilenameMap.get("suffix");
+        String filenameWithoutSuffixNew = newFilenameMap.get("filenameWithoutSuffix");
+
+        if(!filenameWithoutSuffix.equals(filenameWithoutSuffixNew) || !suffix.equals(suffixNew)){
+            System.out.println("重命名");
+        }
+
+        List<String> newPathList = new ArrayList<>(pathList);
+
+        // 防止根目录问题
+        if(newPathList.size()<=1) {
+            System.out.println("根目录添加");
+            newPathList.add(filenameWithoutSuffix);
+        }
+        System.out.println(newPathList);
+        Path path = findById(pathId);
+        Path.Node node = getNodeByIdAPath(path, newPathList);
+
+        String tarDirPath = handleDir(filenameWithoutSuffixNew, targetPathList);
+        System.out.println("tarPath:"+tarDirPath);
+        System.out.println(node.getSuffix()+";"+node.getSuffix().length());
+
+        // 原后缀名与新后缀不一致，则修改
+        if(!node.getSuffix().equals(suffixNew)){
+            node.setSuffix(suffixNew);
+            System.out.println("修改后缀名为："+suffixNew);
+        }
+
+        Query query = new Query(Criteria.where("_id").is(pathId));
+        Update update = new Update()
+                .set(tarDirPath+".type", node.getType())
+                .set(tarDirPath+".suffix", node.getSuffix())
+                .set(tarDirPath+".fileLinkId", node.getFileLinkId())
+                .set(tarDirPath+".content", node.getContent());
+
+        UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
+        System.out.println(updateResult);
+
+        // 剪切，删除原目录
+        // 不需要更新fileLink
+        if(isMV){
+            System.out.println("剪切");
+            if(suffix.length()==0){
+                // 目录
+                long deleteDir = deleteDir(username, pathId, filenameWithoutSuffix, pathList);
+            }else{
+                // 文件
+                if(!filenameWithoutSuffix.equals(filenameWithoutSuffixNew)){
+                    // 文件名（key）不等于，删除原文件
+                    String fileLinkId = deleteFile(pathId, filename, pathList);
+                }
+                // 文件名（不包括后缀）不更改时，忽略
+            }
+        }else{
+            // 拷贝
+
+            // 文件|目录更新fileLink
+            if(node.getType()==0){
+                // 文件
+                String hashCode = fileLinkService.getFileLinkById(node.getFileLinkId()).getHashCode();
+                fileLinkService.appendFileLink(hashCode, username);
+            } else if (node.getType()==1) {
+                // 目录
+                List<String> fileLinkIdList = new ArrayList<>();
+                traverseFolder(node, fileLinkIdList);
+                System.out.println(fileLinkIdList);
+                for(String id:fileLinkIdList){
+                    String hashCode = fileLinkService.getFileLinkById(id).getHashCode();
+                    fileLinkService.appendFileLink(hashCode, username);
+                }
+            } // 文件/目录更新fileLink
+        }
+
+        return updateResult.getModifiedCount();
+    }
+
 }
