@@ -2,10 +2,14 @@ package com.jeblove.onList.controller;
 
 import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
+import com.jeblove.onList.entity.User;
 import com.jeblove.onList.service.FileLinkService;
 import com.jeblove.onList.service.FileService;
+import com.jeblove.onList.service.PathService;
+import com.jeblove.onList.service.UserService;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,6 +32,12 @@ public class FileController {
     private FileService fileService;
     @Autowired
     private FileLinkService fileLinkService;
+    @Autowired
+    @Lazy
+    private PathService pathService;
+    @Autowired
+    @Lazy
+    private UserService userService;
 
     /**
      * 获取fs.file文件信息
@@ -108,4 +118,65 @@ public class FileController {
     public Result deleteFile(String userId, String filename,@RequestParam List<String> pathList){
         return fileService.deleteFile(userId, filename, pathList);
     }
+
+    /**
+     * 拷贝文件
+     * api
+     * @param userId 用户id
+     * @param filename 文件名
+     * @param pathList 所在路径（不包含）
+     * @param targetPathList 目标路径（不包含）
+     * @return 成功则1
+     */
+    @RequestMapping("cpFile")
+    public Result cpFile(String userId, String filename,@RequestParam List<String> pathList,@RequestParam List<String> targetPathList){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(false, user.getPathId(), user.getUsername(), filename, pathList, filename, targetPathList);
+        Result result = Result.error(500, "拷贝失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
+
+    /**
+     * 剪切文件
+     * api
+     * @param userId 用户id
+     * @param filename 文件名
+     * @param pathList 所在路径（不包含）
+     * @param targetPathList 目标路径（不包含）
+     * @return 成功则1
+     */
+    @RequestMapping("mvFile")
+    public Result mvFile(String userId, String filename,@RequestParam List<String> pathList,@RequestParam List<String> targetPathList){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(true, user.getPathId(), user.getUsername(), filename, pathList, filename, targetPathList);
+        Result result = Result.error(500, "剪切失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
+
+    /**
+     * 文件重命名
+     * api
+     * @param userId 用户id
+     * @param filename 文件名
+     * @param pathList 所在路径（不包含）
+     * @param newName 新文件名
+     * @return 成功则1
+     */
+    @RequestMapping("renameFile")
+    public Result renameFile(String userId, String filename,@RequestParam  List<String> pathList, String newName){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(true, user.getPathId(), user.getUsername(), filename, pathList, newName, pathList);
+        Result result = Result.error(500, "重命名失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
+
 }
