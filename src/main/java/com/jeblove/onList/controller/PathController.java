@@ -72,4 +72,64 @@ public class PathController {
         }
         return result;
     }
+
+    /**
+     * 拷贝目录
+     * api
+     * @param userId 用户id
+     * @param filename 目录名
+     * @param pathList 所在路径（不包含）
+     * @param targetPathList 目标路径（不包含）
+     * @return 成功则1
+     */
+    @RequestMapping("cpDir")
+    public Result cpDir(String userId, String filename,@RequestParam List<String> pathList,@RequestParam List<String> targetPathList){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(false, user.getPathId(), user.getUsername(), filename, pathList, filename, targetPathList);
+        Result result = Result.error(500, "拷贝失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
+
+    /**
+     * 剪切目录
+     * api
+     * @param userId 用户id
+     * @param filename 目录名
+     * @param pathList 所在路径（不包含）
+     * @param targetPathList 目标路径（不包含）
+     * @return 成功则1
+     */
+    @RequestMapping("mvDir")
+    public Result mvDir(String userId, String filename,@RequestParam List<String> pathList,@RequestParam List<String> targetPathList){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(true, user.getPathId(), user.getUsername(), filename, pathList, filename, targetPathList);
+        Result result = Result.error(500, "剪切失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
+
+    /**
+     * 目录重命名
+     * api
+     * @param userId 用户id
+     * @param filename 目录名
+     * @param pathList 所在路径（不包含）
+     * @param newName 新文件名
+     * @return 成功则1
+     */
+    @RequestMapping("renameDir")
+    public Result renameDir(String userId, String filename,@RequestParam List<String> pathList, String newName){
+        User user = userService.getUser(userId);
+        long count = pathService.copyAMoveFile(true, user.getPathId(), user.getUsername(), filename, pathList, newName, pathList);
+        Result result = Result.error(500, "重命名失败");
+        if(count>0){
+            result = Result.success(count);
+        }
+        return result;
+    }
 }
