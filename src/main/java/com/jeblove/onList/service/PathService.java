@@ -1,6 +1,7 @@
 package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.Result;
+import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -458,12 +459,14 @@ public class PathService {
     }
 
     /**
-     * 拷贝文件/目录
+     * 移动and重命名文件or目录
+     * @param isMV true则剪切&重命名，false则拷贝
      * @param pathId 路径id
      * @param username 用户名
      * @param filename 文件名/目录名
-     * @param pathList 当前所在目录（不包含）
-     * @param targetPathList 复制到目标目录（不包含）
+     * @param pathList 所在目录（不包含）
+     * @param newName 剪切/拷贝后新名
+     * @param targetPathList 目标目录（不包含）
      * @return 修改条数
      */
     public long copyAMoveFile(Boolean isMV, String pathId, String username, String filename, List<String> pathList, String newName, List<String> targetPathList){
@@ -488,18 +491,59 @@ public class PathService {
             System.out.println("根目录添加");
             newPathList.add(filenameWithoutSuffix);
         }
-        System.out.println(newPathList);
         Path path = findById(pathId);
         Path.Node node = getNodeByIdAPath(path, newPathList);
 
         String tarDirPath = handleDir(filenameWithoutSuffixNew, targetPathList);
-        System.out.println("tarPath:"+tarDirPath);
-        System.out.println(node.getSuffix()+";"+node.getSuffix().length());
+        System.out.println("PathChange:"+pathList+" -To- "+targetPathList);
 
-        // 原后缀名与新后缀不一致，则修改
-        if(!node.getSuffix().equals(suffixNew)){
-            node.setSuffix(suffixNew);
-            System.out.println("修改后缀名为："+suffixNew);
+        // 目标目录下的文件
+        List<String> newTargetPathList = new ArrayList<>(targetPathList);
+        // 防止根目录问题
+        String originFileLinkId;
+        String originFilename;
+        System.out.println(newTargetPathList.size());
+        System.out.println(newTargetPathList+";"+filenameWithoutSuffixNew);
+        Path.Node tarNode = getNodeByIdAPath(path, newTargetPathList);
+        if(newTargetPathList.size()<=1) {
+            System.out.println("根目录添加");
+            newTargetPathList.add(filenameWithoutSuffixNew);
+            originFileLinkId = "";
+            originFilename = "";
+        }else{
+
+            System.out.println("tarNode:"+tarNode);
+            Map<String, Path.Node> contentNode = tarNode.getContent();
+            List<String> originFileLinkList = new ArrayList<>();
+            contentNode.forEach((nodeKey, nodeValue) -> {
+                originFileLinkList.add(nodeValue.getFileLinkId());
+                originFileLinkList.add(nodeKey);
+            });
+            if(originFileLinkList.size()==0){
+                originFileLinkId = "";
+                originFilename = "";
+            }else{
+                originFileLinkId = originFileLinkList.get(0);
+                originFilename = originFileLinkList.get(1);
+                originFileLinkList.clear();
+            }
+
+        }
+
+        try {
+            // 目录覆盖问题
+            if(tarNode.getType()==1){
+                System.out.println("扫描删除目标目录");
+                deleteDir(username, pathId, filenameWithoutSuffixNew, targetPathList);
+            }
+
+            // 原后缀名与新后缀不一致，则修改
+            if(!node.getSuffix().equals(suffixNew)){
+                node.setSuffix(suffixNew);
+                System.out.println("修改后缀名为："+suffixNew);
+            }
+        }catch (Exception e){
+            System.out.println("目标为根目录");
         }
 
         Query query = new Query(Criteria.where("_id").is(pathId));
@@ -512,19 +556,36 @@ public class PathService {
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
         System.out.println(updateResult);
 
+        Boolean isFile = false;
+
         // 剪切，删除原目录
         // 不需要更新fileLink
         if(isMV){
             System.out.println("剪切");
             if(suffix.length()==0){
                 // 目录
-                long deleteDir = deleteDir(username, pathId, filenameWithoutSuffix, pathList);
+//                long deleteDir = deleteDir(username, pathId, filenameWithoutSuffix, pathList);
+                // 直接删除源目录
+                String dirPath = handleDir(filenameWithoutSuffix, pathList);
+                Update updateDir = new Update().unset(dirPath);
+                UpdateResult deleteDirResult = mongoTemplate.updateFirst(query, updateDir, Path.class);
+                long deleteDir = deleteDirResult.getModifiedCount();
+
+                isFile = false;
             }else{
                 // 文件
-                if(!filenameWithoutSuffix.equals(filenameWithoutSuffixNew)){
-                    // 文件名（key）不等于，删除原文件
+//                if(filenameWithoutSuffix.equals(filenameWithoutSuffixNew)){
+//                     文件名（key）相同，删除原文件
+
+                // 判断两个路径列表是否相等，相等则是重命名，不进行删除操作
+                if(!pathList.equals(targetPathList)){
                     String fileLinkId = deleteFile(pathId, filename, pathList);
+                    System.out.println("删除源文件:"+fileLinkId);
+                    isFile = true;
                 }
+
+//                }
+
                 // 文件名（不包括后缀）不更改时，忽略
             }
         }else{
@@ -535,6 +596,7 @@ public class PathService {
                 // 文件
                 String hashCode = fileLinkService.getFileLinkById(node.getFileLinkId()).getHashCode();
                 fileLinkService.appendFileLink(hashCode, username);
+                isFile = true;
             } else if (node.getType()==1) {
                 // 目录
                 List<String> fileLinkIdList = new ArrayList<>();
@@ -544,7 +606,15 @@ public class PathService {
                     String hashCode = fileLinkService.getFileLinkById(id).getHashCode();
                     fileLinkService.appendFileLink(hashCode, username);
                 }
-            } // 文件/目录更新fileLink
+                isFile = false;
+            } // 文件||目录更新fileLink
+        }
+        // 文件不一致，替换文件后，更新源文件fileLink记录
+        if(isFile){
+            System.out.println("更新fileLink");
+            if(originFilename.equals(filenameWithoutSuffixNew) && suffix.equals(suffixNew) && !node.getFileLinkId().equals(originFileLinkId)){
+                fileLinkService.deleteFileLinkUpdate(originFileLinkId, username);
+            }
         }
 
         return updateResult.getModifiedCount();
