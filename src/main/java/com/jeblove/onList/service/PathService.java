@@ -1,7 +1,6 @@
 package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.Result;
-import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -492,6 +491,10 @@ public class PathService {
             newPathList.add(filenameWithoutSuffix);
         }
         Path path = findById(pathId);
+        // 判断相同路径，重命名，路径增加到目标文件
+        if(pathList.equals(newPathList)){
+            newPathList.add(filenameWithoutSuffix);
+        }
         Path.Node node = getNodeByIdAPath(path, newPathList);
 
         String tarDirPath = handleDir(filenameWithoutSuffixNew, targetPathList);
@@ -512,7 +515,7 @@ public class PathService {
             originFilename = "";
         }else{
 
-            System.out.println("tarNode:"+tarNode);
+//            System.out.println("tarNode:"+tarNode);
             Map<String, Path.Node> contentNode = tarNode.getContent();
             List<String> originFileLinkList = new ArrayList<>();
             contentNode.forEach((nodeKey, nodeValue) -> {
@@ -578,11 +581,11 @@ public class PathService {
 //                     文件名（key）相同，删除原文件
 
                 // 判断两个路径列表是否相等，相等则是重命名，不进行删除操作
-                if(!pathList.equals(targetPathList)){
+//                if(!pathList.equals(targetPathList)){ // 逻辑错误，取消
                     String fileLinkId = deleteFile(pathId, filename, pathList);
                     System.out.println("删除源文件:"+fileLinkId);
                     isFile = true;
-                }
+//                }
 
 //                }
 
@@ -619,5 +622,48 @@ public class PathService {
 
         return updateResult.getModifiedCount();
     }
+
+    /**
+     * 根据路径获取指定path信息
+     * @param pathId 路径id
+     * @param path 路径，字符串，例如"/","/test"
+     * @return 统一封装，data中是该路径下的文件信息
+     */
+    public Result getRoute(String pathId, String path){
+        Query query = new Query(Criteria.where("_id").is(pathId));
+
+        if(path.equals("/")){
+            // 根目录
+            Path result = mongoTemplate.findOne(query, Path.class);
+            return Result.success(result.getContent());
+        }else{
+            String[] arr = path.split("/");
+
+//            排除第一个空字符串元素
+            arr = Arrays.copyOfRange(arr, 1, arr.length);
+            int len = arr.length;
+
+            String join;
+            if(len==1){
+                join = "content."+String.join(".", arr);
+            }else{
+                // 多目录
+                join = "content."+String.join(".content.", arr);
+            }
+
+            // 确认是否存在
+            query.addCriteria(Criteria.where(join).exists(true));
+            Path result = mongoTemplate.findOne(query, Path.class);
+            if(result==null){
+                return null;
+            }
+
+            // 获取目标目录（排除content.）
+            Path.Node node = getNodeByIdAPath(result, Arrays.asList(arr));
+            return Result.success(node.getContent());
+        }
+
+    }
+
 
 }
