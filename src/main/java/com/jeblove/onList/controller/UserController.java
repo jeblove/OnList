@@ -27,7 +27,7 @@ public class UserController {
      */
     @RequestMapping("login")
     public Result login(String username, String password){
-        return userService.login(username, password);
+        return userService.loginSecurity(username, password);
     }
 
     /**

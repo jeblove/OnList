@@ -1,6 +1,8 @@
 package com.jeblove.onList.service;
 
+import com.jeblove.onList.common.JwtUtils;
 import com.jeblove.onList.common.Result;
+import com.jeblove.onList.common.SecurityConfig;
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
@@ -11,6 +13,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -33,6 +40,14 @@ public class UserService {
     @Autowired
     @Lazy
     private FileLinkService fileLinkService;
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @Value("${fileLink.init.filename}")
     private String initFilename;
@@ -40,12 +55,21 @@ public class UserService {
     private String initFileLinkId;
 
     /**
-     * 获取用户信息
+     * 根据用户id获取用户信息
      * @param id 用户id
      * @return 用户信息
      */
     public User getUser(String id){
         return mongoTemplate.findOne(new Query(Criteria.where("_id").is(id)), User.class);
+    }
+
+    /**
+     * 根据用户名获取用户id
+     * @param username 用户名
+     * @return 用户id
+     */
+    public String getUserIdByUsername(String username){
+        return mongoTemplate.findOne(new Query(Criteria.where("username").is(username)), User.class).getId();
     }
 
     public Result login(String username, String password){
@@ -60,6 +84,41 @@ public class UserService {
         return result;
     }
 
+    /**
+     * 安全登录
+     * api
+     * @param username 用户名
+     * @param password 密码
+     * @return token，userId
+     */
+    public Result loginSecurity(String username, String password){
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails.getUsername(), password);
+        try {
+            authenticationManager.authenticate(authenticationToken);
+            System.out.println("用户："+userDetails.getUsername()+"，登录成功");
+
+            String token = jwtUtils.generateToken(userDetails);
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("token", token);
+            resultMap.put("userId", getUserIdByUsername(userDetails.getUsername()));
+
+            return Result.success(resultMap);
+        }catch (AuthenticationException e){
+            return Result.error(502, "登录失败："+e.getMessage());
+        }
+
+    }
+
+    /**
+     * 用户注册
+     * api
+     * @param user 用户信息
+     * @return 成功条数
+     * @throws Exception
+     */
     public String register(User user) throws Exception{
         // 待判断
         // 时间
@@ -74,6 +133,9 @@ public class UserService {
         // 用户home目录，并添加初始文件
         Path path = pathService.insertPath(initFilename, initFileLinkId);
         user.setPathId(path.getId());
+
+        // 密码加密
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         // 更新fileLink
         FileLink fileLink = fileLinkService.getFileLinkById(initFileLinkId);

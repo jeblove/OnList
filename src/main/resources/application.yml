@@ -23,3 +23,11 @@ fileLink:
   init:
     filename: readme.txt
     fileLinkId: 64687b34528db6326f81d406
+
+jwt:
+  secret: onList
+  expiration: 60
+
+app:
+  security:
+    salt: onList
