@@ -582,10 +582,14 @@ public class PathService {
 
                 // 判断两个路径列表是否相等，相等则是重命名，不进行删除操作
 //                if(!pathList.equals(targetPathList)){ // 逻辑错误，取消
+                // 只改后缀名，不进行删除操作
+                if(!suffix.equals(suffixNew) && filenameWithoutSuffix.equals(filenameWithoutSuffixNew)) {
+
+                }else{
                     String fileLinkId = deleteFile(pathId, filename, pathList);
                     System.out.println("删除源文件:"+fileLinkId);
                     isFile = true;
-//                }
+                }
 
 //                }
 
