@@ -143,7 +143,7 @@ public class UserService {
 
         // 权限
         Map<String, Object> permissions = new HashMap<>();
-        permissions.put("disabled",0);
+        permissions.put("disabled",1);
         user.setPermissions(permissions);
 
         User insert = mongoTemplate.insert(user);
