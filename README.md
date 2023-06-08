@@ -35,6 +35,18 @@ Springboot+Vue3+MongoDB
 
 删除文件，则fileLink-1，链接总数为0时，会真正删除文件。
 
+---
+
+测试账号密码
+
+username: hans2
+password: 123456
+
+username: jeb
+password: 123456
+
+---
+
 
 
 https://github.com/jeblove/OnList.git
