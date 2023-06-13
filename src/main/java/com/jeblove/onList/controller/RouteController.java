@@ -1,13 +1,12 @@
 package com.jeblove.onList.controller;
 
 import com.jeblove.onList.common.Result;
-import com.jeblove.onList.service.PathService;
-import com.jeblove.onList.service.UserService;
+import com.jeblove.onList.service.RouteService;
+import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import javax.annotation.Resource;
 import java.util.Optional;
 
@@ -21,9 +20,9 @@ import java.util.Optional;
 @RestController
 public class RouteController {
     @Resource
-    private PathService pathService;
-    @Resource
-    private UserService userService;
+    private RouteService routeService;
+
+
 
     /**
      * 根据路径获取指定path信息
@@ -32,18 +31,15 @@ public class RouteController {
      * @return 路径下的文件
      */
     @GetMapping("/")
-    public Result handleRouteRequest(@RequestParam("route") String route,@RequestHeader Optional<String> userId){
-        if(!userId.isPresent()){
-            return Result.error(500, "缺少userId");
-        }
-        System.out.println("请求路径："+route);
-        String pathId = userService.getUser(userId.get()).getPathId();
+    public Result handleRouteRequest(@RequestParam("route") String route,@RequestHeader Optional<String> userId) throws JSONException {
 
-        Result result = pathService.getRoute(pathId, route);
-        System.out.println("请求路径下文件："+result.getData());
-        if(result.getData()==null){
-
+        Result result = routeService.handleRoute(route, userId);
+        if(result.getCode()==200){
+            return Result.success(result.getData());
+        }else{
+            return Result.error(result.getCode(), result.getMessage());
         }
-        return Result.success(result.getData());
+
     }
+
 }
