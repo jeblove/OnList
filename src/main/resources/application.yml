@@ -12,6 +12,12 @@ spring:
       enabled: true
       max-file-size: 1GB     # 单个文件大小
       max-request-size: 4GB   # 总文件的上传大小
+  redis:
+    host: localhost
+    database: 0
+    port: 6379
+    username:
+    password:
 
 mybatis:
   type-aliases-package: com.jeblove.onlyList.entity
