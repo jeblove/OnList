@@ -4,11 +4,14 @@ import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
 import com.jeblove.onList.service.PathService;
+import com.jeblove.onList.service.RouteService;
 import com.jeblove.onList.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -24,6 +27,8 @@ public class PathController {
     private PathService pathService;
     @Autowired
     private UserService userService;
+    @Resource
+    private RouteService routeService;
 
     @RequestMapping("getPathById")
     public Path getPathById(String id){
@@ -48,6 +53,8 @@ public class PathController {
         if(result.getCode() != 200 ){
             result = Result.error(result.getCode(), result.getMessage());
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -70,6 +77,8 @@ public class PathController {
         } else if (count==-1) {
             result = Result.error(500, "目录或文件不存在");
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -90,6 +99,8 @@ public class PathController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -110,6 +121,8 @@ public class PathController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -130,6 +143,8 @@ public class PathController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 }

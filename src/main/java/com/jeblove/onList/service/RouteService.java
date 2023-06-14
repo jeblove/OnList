@@ -78,24 +78,34 @@ public class RouteService {
 
         }else{
             System.out.println("不在缓存中");
-
-            result = pathService.getRoute(pathId, "/");
-            System.out.println("该用户初始请求目录："+result.getData());
-
-            // 缓存结果
-            String cacheValue = null;
-            try {
-                // 将 result.getData() 对象序列化成 JSON 字符串
-                cacheValue = objectMapper.writeValueAsString(result.getData());
-            } catch (JsonProcessingException e) {
-                // 异常处理...
-                System.out.println("异常");
-            }
-            if (cacheValue != null) {
-                ops.set(cacheKey, cacheValue, 5, TimeUnit.MINUTES);
-            }
-
+            updateRedisValue(userId.get());
             return handleRoute(route, userId);
+        }
+
+    }
+
+
+    public void updateRedisValue(String userId){
+        System.out.println("------更新Redis------");
+        String pathId = userService.getUser(userId).getPathId();
+
+        ValueOperations<String, String> ops = redisTemplate.opsForValue();
+
+        Result pathResult = pathService.getRoute(pathId, "/");
+        System.out.println("用户目录："+pathResult.getData());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String cacheValue = null;
+        try {
+            // 将 result.getData() 对象序列化成 JSON 字符串
+            cacheValue = objectMapper.writeValueAsString(pathResult.getData());
+        } catch (JsonProcessingException e) {
+            // 异常处理...
+            System.out.println("异常");
+        }
+
+        if (cacheValue != null) {
+            ops.set(userId, cacheValue, 5, TimeUnit.MINUTES);
         }
 
     }

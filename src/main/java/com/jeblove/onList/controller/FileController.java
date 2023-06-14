@@ -3,10 +3,7 @@ package com.jeblove.onList.controller;
 import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.User;
-import com.jeblove.onList.service.FileLinkService;
-import com.jeblove.onList.service.FileService;
-import com.jeblove.onList.service.PathService;
-import com.jeblove.onList.service.UserService;
+import com.jeblove.onList.service.*;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -16,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.List;
 
@@ -38,6 +37,8 @@ public class FileController {
     @Autowired
     @Lazy
     private UserService userService;
+    @Resource
+    private RouteService routeService;
 
     /**
      * 获取fs.file文件信息
@@ -102,7 +103,10 @@ public class FileController {
      */
     @RequestMapping("upload")
     public Result uploadFile(MultipartFile uploadFile, String userId, @RequestParam List<String> pathList) throws Exception {
-        return fileService.uploadFile(uploadFile, userId, pathList);
+        Result result = fileService.uploadFile(uploadFile, userId, pathList);
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
+        return result;
     }
 
 
@@ -116,7 +120,10 @@ public class FileController {
      */
     @RequestMapping("deleteFile")
     public Result deleteFile(String userId, String filename,@RequestParam List<String> pathList){
-        return fileService.deleteFile(userId, filename, pathList);
+        Result result = fileService.deleteFile(userId, filename, pathList);
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
+        return result;
     }
 
     /**
@@ -136,6 +143,8 @@ public class FileController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -156,6 +165,8 @@ public class FileController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
@@ -176,6 +187,8 @@ public class FileController {
         if(count>0){
             result = Result.success(count);
         }
+        // 更新redis缓存
+        routeService.updateRedisValue(userId);
         return result;
     }
 
