@@ -3,14 +3,16 @@ package com.jeblove.onList.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jeblove.onList.common.Result;
-import org.springframework.boot.configurationprocessor.json.JSONException;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
+//import org.springframework.boot.configurationprocessor.json.JSONException;
+//import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * @author : Jeb
@@ -34,7 +36,7 @@ public class RouteService {
      * @return 路径下的文件
      * @throws JSONException
      */
-    public Result handleRoute(String route, Optional<String> userId) throws JSONException {
+    public Result handleRoute(String route, Optional<String> userId) {
         Result result = null;
         JSONObject value = null;
 
@@ -54,7 +56,14 @@ public class RouteService {
         // 判断是否存在缓存数据
         if (cacheResult != null) {
             System.out.println("从缓存获取结果：" + cacheResult);
-            JSONObject directory = new JSONObject(cacheResult);
+
+            JSONObject directory = null;
+            try {
+                directory = new JSONObject(cacheResult);
+            } catch (JSONException e) {
+                System.out.println("json出错");
+//                throw new RuntimeException(e);
+            }
 
             value = directory;
 

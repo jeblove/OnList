@@ -22,8 +22,6 @@ public class RouteController {
     @Resource
     private RouteService routeService;
 
-
-
     /**
      * 根据路径获取指定path信息
      * @param route 路径，例如'/'，‘/test’
@@ -31,7 +29,7 @@ public class RouteController {
      * @return 路径下的文件
      */
     @GetMapping("/")
-    public Result handleRouteRequest(@RequestParam("route") String route,@RequestHeader Optional<String> userId) throws JSONException {
+    public Result handleRouteRequest(@RequestParam("route") String route,@RequestHeader Optional<String> userId) {
 
         Result result = routeService.handleRoute(route, userId);
         if(result.getCode()==200){
