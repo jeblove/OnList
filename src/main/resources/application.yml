@@ -18,6 +18,8 @@ spring:
     port: 6379
     username:
     password:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
 mybatis:
   type-aliases-package: com.jeblove.onlyList.entity
@@ -32,7 +34,7 @@ fileLink:
 
 jwt:
   secret: onList
-  expiration: 60
+  expiration: 5
 
 app:
   security:

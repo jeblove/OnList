@@ -107,7 +107,15 @@ public class JwtUtils {
      * @return 时间
      */
     private Date generateExpirationDate() {
-        return new Date(System.currentTimeMillis() + expiration * 1000 * 60 * 1000);
+        // 过期时间的分钟数
+        long expirationMinutes = expiration;
+        // 转换为毫秒数
+        long expirationMilliseconds = expirationMinutes * 60 * 1000;
+        // 获取当前时间并添加过期时间
+        Date currentDate = new Date();
+        Date date = new Date(currentDate.getTime() + expirationMilliseconds);
+        System.out.println("过期时间为:"+date);
+        return date;
     }
 
 }
