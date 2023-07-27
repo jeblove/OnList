@@ -2,7 +2,6 @@ package com.jeblove.onList.service;
 
 import com.jeblove.onList.common.JwtUtils;
 import com.jeblove.onList.common.Result;
-import com.jeblove.onList.common.SecurityConfig;
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;

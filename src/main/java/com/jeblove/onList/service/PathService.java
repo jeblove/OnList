@@ -458,7 +458,7 @@ public class PathService {
     }
 
     /**
-     * 移动and重命名文件or目录
+     * 复制and移动and重命名文件or目录
      * @param isMV true则剪切&重命名，false则拷贝
      * @param pathId 路径id
      * @param username 用户名
