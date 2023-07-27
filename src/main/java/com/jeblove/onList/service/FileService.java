@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -242,6 +243,26 @@ public class FileService {
             return Result.error(500, "删除链接文件失败");
         }
         return result;
+    }
+
+    /**
+     * 查询总占用空间
+     * @return MB
+     */
+    public Result queryTotalSize(){
+        GridFsResource[] resources = gridFsTemplate.getResources("*");
+        long totalSize = 0;
+        for(GridFsResource resource: resources){
+            try {
+                totalSize += resource.contentLength();
+            } catch (IOException e) {
+                return Result.error(500,"查询失败："+e.getMessage());
+            }
+        }
+        double totalSizeM = totalSize / (1024.0 * 1024.0);
+        DecimalFormat df = new DecimalFormat("#.00");
+        String formattedTotalSize = df.format(totalSizeM);
+        return Result.success(formattedTotalSize);
     }
 
 }

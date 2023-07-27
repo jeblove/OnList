@@ -192,4 +192,13 @@ public class FileController {
         return result;
     }
 
+    /**
+     * 查询总占用空间
+     * @return MB
+     */
+    @RequestMapping("queryTotalSize")
+    public Result queryTotalSize(){
+        return fileService.queryTotalSize();
+    }
+
 }
