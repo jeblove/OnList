@@ -260,7 +260,7 @@ public class FileService {
             }
         }
         double totalSizeM = totalSize / (1024.0 * 1024.0);
-        DecimalFormat df = new DecimalFormat("#.00");
+        DecimalFormat df = new DecimalFormat("0.00");
         String formattedTotalSize = df.format(totalSizeM);
         return Result.success(formattedTotalSize);
     }
