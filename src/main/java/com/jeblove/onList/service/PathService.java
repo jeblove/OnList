@@ -90,6 +90,9 @@ public class PathService {
      * @return 用.连接起来的字符串目录
      */
     public String handleDir(String folderName, List<String> pathList){
+        // 替换掉点号为_
+        folderName = folderName.replace(".", "_");
+
         List<String> list = new ArrayList<>(pathList);
         // if判断是否为根目录
         if(list.isEmpty()){
