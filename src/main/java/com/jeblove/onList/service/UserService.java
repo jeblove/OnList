@@ -18,8 +18,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,19 +112,48 @@ public class UserService {
     /**
      * 用户注册
      * api
+     *
      * @param user 用户信息
      * @return 成功条数
      * @throws Exception
      */
-    public String register(User user) throws Exception{
+    public Result register(User user) throws Exception{
         // 待判断
+        Result emptyError = Result.error(500, "信息不能为空！");
+
+        if (user.getUsername() == null || user.getUsername().isEmpty()) {
+            return emptyError;
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            return emptyError;
+        }
+
+        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+            String regexEmail = "\\@";
+            if (!user.getEmail().matches(regexEmail)) {
+                return Result.error(500, "邮箱信息异常！");
+            }
+        } else {
+            return emptyError;
+        }
+
+        if (user.getPhone() != null && !user.getPhone().isEmpty()) {
+            String regexPhoneNum = "\\d{11}";
+            if (!user.getPhone().matches(regexPhoneNum)) {
+                return Result.error(500, "手机号位数不正确！");
+            }
+        } else {
+            return emptyError;
+        }
+
         // 时间
 //        LocalDateTime currentTime = LocalDateTime.now();
 //        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 //        String formattedTime = currentTime.format(formatter);
 //        user.setSignUpTime(formattedTime);
 
-        Date date = Date.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+//        Date date = Date.from(LocalDateTime.now().toInstant(ZoneOffset.UTC));
+        Date date = new Date();
         user.setSignUpTime(date);
 
         // 用户home目录，并添加初始文件
@@ -147,7 +174,7 @@ public class UserService {
 
         User insert = mongoTemplate.insert(user);
         System.out.println(insert);
-        return insert.toString();
+        return Result.success(insert);
     }
 
     /**

@@ -37,8 +37,12 @@ public class UserController {
      * @throws Exception
      */
     @RequestMapping("register")
-    public String register(User user) throws Exception {
-        return userService.register(user);
+    public Result register(User user) throws Exception {
+        Result register = userService.register(user);
+        if(register.getCode()!=200){
+            return Result.error(register.getCode(),register.getMessage());
+        }
+        return Result.success(register.getData());
     }
 
     /**
