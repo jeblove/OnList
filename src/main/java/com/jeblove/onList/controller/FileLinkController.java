@@ -1,5 +1,6 @@
 package com.jeblove.onList.controller;
 
+import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.service.FileLinkService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author : Jeb
@@ -27,5 +29,15 @@ public class FileLinkController {
     @RequestMapping("findOne")
     public FileLink findOne(String id){
         return fileLinkService.getFileLinkById(id);
+    }
+
+    @RequestMapping("getAllFileLinkInfo")
+    public Result getAllFileLinkInfo(){
+        return Result.success(fileLinkService.getAllFileLinkInfo());
+    }
+
+    @RequestMapping("showFileLinkInfo")
+    public List<Map<Object, Object>> showFileLinkInfo(){
+        return fileLinkService.showFileLinkInfo();
     }
 }

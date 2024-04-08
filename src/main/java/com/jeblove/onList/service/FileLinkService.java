@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -184,4 +186,34 @@ public class FileLinkService {
         return result;
     }
 
+    /**
+     * 获取fileLink列表[api]
+     * @return List<FileLink>
+     */
+    public List<FileLink> getAllFileLinkInfo(){
+        List<FileLink> fileLinks = mongoTemplate.findAll(FileLink.class);
+        System.out.println(fileLinks);
+        return fileLinks;
+    }
+
+    /**
+     * 获取特定fileLink信息[api admin]
+     * @return List<Map<Object, Object>>
+     */
+    public List<Map<Object, Object>> showFileLinkInfo(){
+        List<FileLink> fileLinks = mongoTemplate.findAll(FileLink.class);
+        List<Map<Object, Object>> mapList = new ArrayList<>();
+
+        for (FileLink kv : fileLinks){
+            HashMap<Object, Object> map = new HashMap<>();
+            map.put("id", kv.getId());
+            String filename = fileService.getFileInfoById(kv.getFileId()).getFilename();
+            map.put("filename", filename);
+            map.put("linkNum", kv.getLinkNum());
+            map.put("linkUserMap", kv.getLinkUserMap());
+            mapList.add(map);
+        }
+//        System.out.println(mapList);
+        return mapList;
+    }
 }
