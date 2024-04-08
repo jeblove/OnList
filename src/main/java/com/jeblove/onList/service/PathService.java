@@ -462,12 +462,12 @@ public class PathService {
 
     /**
      * 复制and移动and重命名文件or目录
-     * @param isMV true则剪切&重命名，false则拷贝
+     * @param isMV true则剪切&重命名，false则复制
      * @param pathId 路径id
      * @param username 用户名
      * @param filename 文件名/目录名
      * @param pathList 所在目录（不包含）
-     * @param newName 剪切/拷贝后新名
+     * @param newName 剪切/复制后新名
      * @param targetPathList 目标目录（不包含）
      * @return 修改条数
      */
@@ -599,7 +599,7 @@ public class PathService {
                 // 文件名（不包括后缀）不更改时，忽略
             }
         }else{
-            // 拷贝
+            // 复制
 
             // 文件|目录更新fileLink
             if(node.getType()==0){
@@ -672,5 +672,14 @@ public class PathService {
 
     }
 
+    /**
+     * 获取path列表 [api]
+     * @returnList<Path>
+     */
+    public List<Path> getAllPathInfo(){
+        List<Path> paths = mongoTemplate.findAll(Path.class);
+        System.out.println(paths);
+        return paths;
+    }
 
 }

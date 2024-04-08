@@ -147,4 +147,9 @@ public class PathController {
         routeService.updateRedisValue(userId);
         return result;
     }
+
+    @RequestMapping("getAllPathInfo")
+    public Result getAllPathInfo(){
+        return Result.success(pathService.getAllPathInfo());
+    }
 }
