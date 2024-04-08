@@ -4,6 +4,7 @@ import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.FileLink;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -23,6 +24,7 @@ import java.util.Map;
  * @description : TODO
  */
 @Service
+@Slf4j
 public class FileLinkService {
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -192,7 +194,6 @@ public class FileLinkService {
      */
     public List<FileLink> getAllFileLinkInfo(){
         List<FileLink> fileLinks = mongoTemplate.findAll(FileLink.class);
-        System.out.println(fileLinks);
         return fileLinks;
     }
 
@@ -213,7 +214,6 @@ public class FileLinkService {
             map.put("linkUserMap", kv.getLinkUserMap());
             mapList.add(map);
         }
-//        System.out.println(mapList);
         return mapList;
     }
 }

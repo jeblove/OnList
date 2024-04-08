@@ -4,6 +4,7 @@ import com.jeblove.onList.common.Result;
 import com.jeblove.onList.entity.Path;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -20,6 +21,7 @@ import java.util.*;
  * @description : TODO
  */
 @Service
+@Slf4j
 public class PathService {
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -27,13 +29,20 @@ public class PathService {
     @Lazy
     private FileLinkService fileLinkService;
 
+    /**
+     * 根据id查询Path
+     * @param id path id
+     * @return Path
+     */
     public Path findById(String id){
         Query query = new Query(Criteria.where("_id").is(id));
-        return mongoTemplate.findOne(query, Path.class);
+        Path path = mongoTemplate.findOne(query, Path.class);
+        log.debug("根据id: {}查询Path: {}", id, path);
+        return path;
     }
 
     /**
-     * 处理文件后最
+     * 处理文件后缀
      * @param filename 文件名（包括后缀）例如：readme.txt
      * @return 键值对，suffix：文件后缀，filenameWithoutSuffix：无后缀文件名
      */
@@ -80,6 +89,7 @@ public class PathService {
         content.put(filenameWithoutSuffix, node);
         path.setContent(content);
 
+        log.info("初始化用户目录");
         return mongoTemplate.insert(path);
     }
 
@@ -96,7 +106,7 @@ public class PathService {
         List<String> list = new ArrayList<>(pathList);
         // if判断是否为根目录
         if(list.isEmpty()){
-            System.out.println("/");
+            // "/"
         }else{
             // 防止传递空字符串[""]列表
             if(list.get(0).equals("")){
@@ -114,7 +124,6 @@ public class PathService {
 
         // 文件夹
         String dirPath = String.join(".", list);
-        System.out.println(dirPath);
         return dirPath;
     }
 
@@ -146,7 +155,7 @@ public class PathService {
                 .set(contentKey, new HashMap<>());
 
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
-        System.out.println(updateResult);
+//        log.debug("目录{}创建文件: {}", pathId, filename);
         return updateResult.getModifiedCount();
     }
 
@@ -165,14 +174,13 @@ public class PathService {
         if(pathList.size()!=0){
             // 非空目录，则检测父目录是否正常
             if(getNodeByIdAPath(path, pathList)==null){
-                System.out.println("pathService,createDir");
                 return Result.error(500, "父目录异常");
             }
         }
 
         long modifiedCount = createFile(folderName, pathList, pathId, 1, "", "");
         result = Result.success(modifiedCount);
-
+        log.debug("目录{}创建文件夹{}", pathId, folderName);
         return result;
     }
 
@@ -200,7 +208,6 @@ public class PathService {
         }else{
             // count为条数
             List<String> fileLinkIdList = (List<String>) scanFileMap.get("fileLinkIdList");
-            System.out.println("tt,fileLinkIdList:"+fileLinkIdList);
 
             for (String fileLinkId : fileLinkIdList) {
                 int code = fileLinkService.deleteFileLinkUpdate(fileLinkId, username).getCode();
@@ -214,7 +221,7 @@ public class PathService {
         Query query = new Query(Criteria.where("_id").is(pathId));
         Update update = new Update().unset(dirPath);
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
-        System.out.println(updateResult);
+        log.debug("用户{}删除目录{}", username, folderName);
         return updateResult.getModifiedCount();
     }
 
@@ -232,6 +239,7 @@ public class PathService {
         String filenameWithoutSuffix = filenameMap.get("filenameWithoutSuffix");
 
         long modifiedCount = createFile(filenameWithoutSuffix, pathList, pathId, 0, suffix, fileLinkId);
+        log.debug("目录{}添加链接文件{}", pathId, filename);
         return modifiedCount;
     }
 
@@ -260,7 +268,7 @@ public class PathService {
         for (String key : pathList) {
             // 如果遇到空节点，则返回默认值或者抛出异常
             if (!content.containsKey(key)) {
-                System.out.println("没有这个key:"+key);
+                log.warn("没有这个key: {}", key);
                 isNull = true;
                 break;
             }
@@ -272,7 +280,6 @@ public class PathService {
         if(isNull){
             node = null;
         }
-        System.out.println("node:"+node);
         return node;
     }
 
@@ -303,7 +310,7 @@ public class PathService {
         if(node.getSuffix().length()!=0){
 
             if(node.getSuffix().equals(suffix)){
-                System.out.println("文件无误");
+                // 文件无误
             }
 
             String fileLinkId = node.getFileLinkId();
@@ -315,11 +322,14 @@ public class PathService {
             // 确认删除，返回fileLinkId
             if(updateResult.getModifiedCount()>0){
                 result = fileLinkId;
+                log.debug("删除目录{}文件{}", pathId, filename);
             }else{
                 result = null;
+                log.warn("删除目录{}文件失败", pathId);
             }
         }else{
             result = null;
+            log.warn("删除目录{}文件失败", pathId);
         }
         return result;
     }
@@ -365,7 +375,7 @@ public class PathService {
         Boolean isRoot;
         // 防止根目录问题
         if(newPathList.isEmpty()){
-            System.out.println("根目录添加");
+            // 根目录添加
             newPathList.add(folderName);
             isRoot = true;
         } else {
@@ -380,7 +390,7 @@ public class PathService {
 
         // 目录异常
         if(node==null){
-            System.out.println("目录异常");
+            log.warn("目录异常");
             resultMap.put("count", -1);
             return resultMap;
         }
@@ -395,7 +405,6 @@ public class PathService {
         }else{
             if(!isRoot){
                 content.forEach((key, value) -> {
-//                    System.out.println("key:"+key+";"+"value:"+value);
                         // 目标文件夹
                         if(key.equals(folderName) && (value.getSuffix()==null || "".equals(value.getSuffix()))){
                             // 遍历子文件夹，调用方法
@@ -410,7 +419,6 @@ public class PathService {
             resultMap.put("fileLinkIdList", fileLinkIdList);
             resultMap.put("count", fileLinkIdList.size());
         }
-        System.out.println("fileLinkIdList:"+fileLinkIdList);
         return resultMap;
     }
 
@@ -446,7 +454,7 @@ public class PathService {
         Path path = findById(pathId);
         List<String> fileLinkIdList = new ArrayList<>();
         traverseRootPath(path, fileLinkIdList);
-        System.out.println(fileLinkIdList);
+
         // 更新fileLink
         if(fileLinkIdList.size()>1){
             for (String fileLinkId : fileLinkIdList) {
@@ -457,6 +465,7 @@ public class PathService {
             }
         }
         DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(pathId)), Path.class);
+        log.debug("删除用户{}目录path: {}", username, pathId);
         return deleteResult.getDeletedCount();
     }
 
@@ -483,14 +492,14 @@ public class PathService {
         String filenameWithoutSuffixNew = newFilenameMap.get("filenameWithoutSuffix");
 
         if(!filenameWithoutSuffix.equals(filenameWithoutSuffixNew) || !suffix.equals(suffixNew)){
-            System.out.println("重命名");
+            log.debug("重命名操作");
         }
 
         List<String> newPathList = new ArrayList<>(pathList);
 
         // 防止根目录问题
         if(newPathList.size()<=1) {
-            System.out.println("根目录添加");
+            log.debug("根目录添加");
             newPathList.add(filenameWithoutSuffix);
         }
         Path path = findById(pathId);
@@ -501,24 +510,23 @@ public class PathService {
         Path.Node node = getNodeByIdAPath(path, newPathList);
 
         String tarDirPath = handleDir(filenameWithoutSuffixNew, targetPathList);
-        System.out.println("PathChange:"+pathList+" -To- "+targetPathList);
+
+        log.debug("PathChange:{} -To- {}", pathList, targetPathList);
 
         // 目标目录下的文件
         List<String> newTargetPathList = new ArrayList<>(targetPathList);
         // 防止根目录问题
         String originFileLinkId;
         String originFilename;
-        System.out.println(newTargetPathList.size());
-        System.out.println(newTargetPathList+";"+filenameWithoutSuffixNew);
+
         Path.Node tarNode = getNodeByIdAPath(path, newTargetPathList);
         if(newTargetPathList.size()<=1) {
-            System.out.println("根目录添加");
+            log.debug("根目录添加");
             newTargetPathList.add(filenameWithoutSuffixNew);
             originFileLinkId = "";
             originFilename = "";
         }else{
 
-//            System.out.println("tarNode:"+tarNode);
             Map<String, Path.Node> contentNode = tarNode.getContent();
             List<String> originFileLinkList = new ArrayList<>();
             contentNode.forEach((nodeKey, nodeValue) -> {
@@ -539,17 +547,17 @@ public class PathService {
         try {
             // 目录覆盖问题
             if(tarNode.getType()==1){
-                System.out.println("扫描删除目标目录");
+                // 扫描删除目标目录
                 deleteDir(username, pathId, filenameWithoutSuffixNew, targetPathList);
             }
 
             // 原后缀名与新后缀不一致，则修改
             if(!node.getSuffix().equals(suffixNew)){
                 node.setSuffix(suffixNew);
-                System.out.println("修改后缀名为："+suffixNew);
+                log.debug("修改后缀名为：{}", suffixNew);
             }
         }catch (Exception e){
-            System.out.println("目标为根目录");
+            log.warn("目标为根目录");
         }
 
         Query query = new Query(Criteria.where("_id").is(pathId));
@@ -560,14 +568,13 @@ public class PathService {
                 .set(tarDirPath+".content", node.getContent());
 
         UpdateResult updateResult = mongoTemplate.updateFirst(query, update, Path.class);
-        System.out.println(updateResult);
 
         Boolean isFile = false;
 
         // 剪切，删除原目录
         // 不需要更新fileLink
         if(isMV){
-            System.out.println("剪切");
+            log.debug("剪切操作");
             if(suffix.length()==0){
                 // 目录
 //                long deleteDir = deleteDir(username, pathId, filenameWithoutSuffix, pathList);
@@ -590,7 +597,7 @@ public class PathService {
 
                 }else{
                     String fileLinkId = deleteFile(pathId, filename, pathList);
-                    System.out.println("删除源文件:"+fileLinkId);
+                    // "删除源文件:"+fileLinkId
                     isFile = true;
                 }
 
@@ -600,7 +607,7 @@ public class PathService {
             }
         }else{
             // 复制
-
+            log.debug("复制操作");
             // 文件|目录更新fileLink
             if(node.getType()==0){
                 // 文件
@@ -611,7 +618,6 @@ public class PathService {
                 // 目录
                 List<String> fileLinkIdList = new ArrayList<>();
                 traverseFolder(node, fileLinkIdList);
-                System.out.println(fileLinkIdList);
                 for(String id:fileLinkIdList){
                     String hashCode = fileLinkService.getFileLinkById(id).getHashCode();
                     fileLinkService.appendFileLink(hashCode, username);
@@ -621,7 +627,7 @@ public class PathService {
         }
         // 文件不一致，替换文件后，更新源文件fileLink记录
         if(isFile){
-            System.out.println("更新fileLink");
+            log.debug("更新fileLink");
             if(originFilename.equals(filenameWithoutSuffixNew) && suffix.equals(suffixNew) && !node.getFileLinkId().equals(originFileLinkId)){
                 fileLinkService.deleteFileLinkUpdate(originFileLinkId, username);
             }
@@ -678,7 +684,7 @@ public class PathService {
      */
     public List<Path> getAllPathInfo(){
         List<Path> paths = mongoTemplate.findAll(Path.class);
-        System.out.println(paths);
+        log.debug("获取path列表: {}", paths);
         return paths;
     }
 

@@ -2,6 +2,7 @@ package com.jeblove.onList.service;
 
 import com.jeblove.onList.entity.CustomUserDetails;
 import com.jeblove.onList.entity.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
  * @description : 用于安全认证
  */
 @Service
+@Slf4j
 public class CustomUserDetailsService implements UserDetailsService {
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -34,6 +36,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         Query query = new Query(Criteria.where("username").is(username));
         User user = mongoTemplate.findOne(query, User.class);
         if (user == null) {
+            log.warn("用户{}不存在", username);
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
         return new CustomUserDetails(user);

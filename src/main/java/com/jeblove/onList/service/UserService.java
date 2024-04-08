@@ -7,6 +7,7 @@ import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -34,6 +35,7 @@ import java.util.Map;
  * @description : TODO
  */
 @Service
+@Slf4j
 public class UserService {
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -62,7 +64,9 @@ public class UserService {
      * @return 用户信息
      */
     public User getUser(String id){
-        return mongoTemplate.findOne(new Query(Criteria.where("_id").is(id)), User.class);
+        User resultId = mongoTemplate.findOne(new Query(Criteria.where("_id").is(id)), User.class);
+        log.debug("根据用户id: {}获取用户信息{}", id, resultId);
+        return resultId;
     }
 
     /**
@@ -71,7 +75,9 @@ public class UserService {
      * @return 用户id
      */
     public String getUserIdByUsername(String username){
-        return mongoTemplate.findOne(new Query(Criteria.where("username").is(username)), User.class).getId();
+        String id = mongoTemplate.findOne(new Query(Criteria.where("username").is(username)), User.class).getId();
+        log.debug("根据用户名{}获取用户id: {}", username, id);
+        return id;
     }
 
     public Result login(String username, String password){
@@ -99,20 +105,20 @@ public class UserService {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails.getUsername(), password);
         try {
             authenticationManager.authenticate(authenticationToken);
-            System.out.println("用户："+userDetails.getUsername()+"，登录成功");
 
             String token = jwtUtils.generateToken(userDetails);
 
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("token", token);
             resultMap.put("userId", getUserIdByUsername(userDetails.getUsername()));
-            List<User> users = mongoTemplate.findAll(User.class);
-            System.out.println(users);
+//            List<User> users = mongoTemplate.findAll(User.class);
+//            System.out.println(users);
+            log.info("用户{}登录成功", userDetails.getUsername());
             return Result.success(resultMap);
         }catch (AuthenticationException e){
+            log.warn("用户{}登录失败", userDetails.getUsername());
             return Result.error(502, "登录失败："+e.getMessage());
         }
-
     }
 
     /**
@@ -182,7 +188,8 @@ public class UserService {
         user.setPermissions(permissions);
 
         User insert = mongoTemplate.insert(user);
-        System.out.println(insert);
+//        System.out.println(insert);
+        log.info("用户{}注册: {}", user.getUsername(), insert);
         return Result.success(insert);
     }
 
@@ -209,7 +216,9 @@ public class UserService {
                     result = Result.success(deletedCount);
                 }
             }
+            log.info("删除用户{}成功", id);
         }else{
+            log.info("删除用户{}失败", id);
             result = login;
         }
         return result;
@@ -231,6 +240,7 @@ public class UserService {
         if (login.getCode() == 200){
             Query query;
             Update update = new Update();
+            String userId;
 
             Integer loginUserRole = (Integer) loginUser.getPermissions().get("role");
             if (loginUserRole == 0) {
@@ -244,15 +254,16 @@ public class UserService {
                     update.set("permissions.role", newRole);
                 }
                 // 管理员账号修改的是根据参数user中的id
-                query = new Query(Criteria.where("_id").is(user.getId()));
+                userId = user.getId();
             }else{
                 if (loginUser.getId().equals(user.getId())){
                     // 非管理员只能修改自己账号
-                    query = new Query(Criteria.where("_id").is(loginUser.getId()));
+                    userId = loginUser.getId();
                 }else{
                     return Result.error(502, "普通用户，仅能修改自己账号");
                 }
             }
+            query = new Query(Criteria.where("_id").is(userId));
             String newUsername = user.getUsername();
             String newPassword = user.getPassword();
             if (ObjectUtils.isEmpty(newUsername)){
@@ -263,9 +274,10 @@ public class UserService {
             }
 
             UpdateResult updateResult = mongoTemplate.updateFirst(query, update, User.class);
-            System.out.println(updateResult);
+            log.info("修改用户{}成功", userId);
             return Result.success(updateResult.getModifiedCount());
         }else{
+            log.warn("用户或密码错误，修改用户失败");
             return Result.error(502, "用户或密码错误");
         }
     }
@@ -276,7 +288,7 @@ public class UserService {
      */
     public List<User> getAllUserInfo(){
         List<User> users = mongoTemplate.findAll(User.class);
-        System.out.println(users);
+        log.debug("获取用户列表: {}", users);
         return users;
     }
 }

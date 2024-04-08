@@ -3,16 +3,15 @@ package com.jeblove.onList.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jeblove.onList.common.Result;
-//import org.springframework.boot.configurationprocessor.json.JSONException;
-//import org.springframework.boot.configurationprocessor.json.JSONObject;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * @author : Jeb
@@ -21,6 +20,7 @@ import org.json.JSONObject;
  * @description : TODO
  */
 @Service
+@Slf4j
 public class RouteService {
     @Resource
     private UserService userService;
@@ -43,26 +43,25 @@ public class RouteService {
         if(!userId.isPresent()){
             return Result.error(500, "缺少userId");
         }
-        System.out.println("请求路径："+route);
+        log.debug("用户{}请求路径{}", userId, route);
         String pathId = userService.getUser(userId.get()).getPathId();
 
         // redis 构造键值
         String cacheKey = userId.get();
-        System.out.println("cacheKey:"+cacheKey);
+
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
         String cacheResult = ops.get(cacheKey);
 
         ObjectMapper objectMapper = new ObjectMapper();
         // 判断是否存在缓存数据
         if (cacheResult != null) {
-            System.out.println("从缓存获取结果：" + cacheResult);
+            log.debug("从缓存获取结果: {}", cacheResult);
 
             JSONObject directory = null;
             try {
                 directory = new JSONObject(cacheResult);
             } catch (JSONException e) {
-                System.out.println("json出错");
-//                throw new RuntimeException(e);
+                log.error("json出错");
             }
 
             value = directory;
@@ -80,28 +79,31 @@ public class RouteService {
                 Object data = objectMapper.readValue(value.toString(), Object.class);
                 return Result.success(data);
             }catch (Exception e){
-                System.out.println("异常");
+                log.error("处理route异常");
             }
 
             return Result.success(value);
 
         }else{
-            System.out.println("不在缓存中");
+            log.debug("cacheKey: {}不在缓存中", cacheKey);
             updateRedisValue(userId.get());
             return handleRoute(route, userId);
         }
 
     }
 
-
+    /**
+     * 更新redis缓存
+     * @param userId 用户id
+     */
     public void updateRedisValue(String userId){
-        System.out.println("------更新Redis------");
+        log.debug("更新redis");
         String pathId = userService.getUser(userId).getPathId();
 
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
 
         Result pathResult = pathService.getRoute(pathId, "/");
-        System.out.println("用户目录："+pathResult.getData());
+        // "用户目录："+pathResult.getData());
 
         ObjectMapper objectMapper = new ObjectMapper();
         String cacheValue = null;
@@ -110,7 +112,7 @@ public class RouteService {
             cacheValue = objectMapper.writeValueAsString(pathResult.getData());
         } catch (JsonProcessingException e) {
             // 异常处理...
-            System.out.println("异常");
+            log.error("更新redis缓存异常");
         }
 
         if (cacheValue != null) {

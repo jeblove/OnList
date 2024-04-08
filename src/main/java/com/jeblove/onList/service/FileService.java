@@ -8,6 +8,7 @@ import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,7 @@ import java.util.Map;
  * @description : 文件的上传，下载，查询
  */
 @Service
+@Slf4j
 public class FileService {
     @Value("${fileLink.hashType}")
     private String hashType;
@@ -72,6 +74,7 @@ public class FileService {
         if (gridFSFile==null){
 //            文件不存在
             result = Result.error(500,"文件不存在");
+            log.warn("文件{}不存在", name);
         }else {
             result = Result.success(gridFSFile);
         }
@@ -100,13 +103,14 @@ public class FileService {
         ObjectId objectId = null;
 
         objectId = gridFsTemplate.store(inputStream, fileName);
-        System.out.println(objectId);
 
         Result result;
         if (objectId.toString().equals("") || objectId.toString() == null || objectId == null){
             result = Result.error(500,"上传失败");
+            log.warn("文件{}上传失败", fileName);
         }else{
             result = Result.success(objectId.toString());
+            log.info("文件{}上传成功", fileName);
         }
         inputStream.close();
         return result;
@@ -123,9 +127,11 @@ public class FileService {
         if (gridFSFile==null){
 //            文件不存在
             result = Result.error(500,"文件不存在");
+            log.warn("删除文件{}不存在", id);
         }else {
             result = Result.success(true);
             gridFsTemplate.delete(new Query(Criteria.where("_id").is(id)));
+            log.info("删除文件{}成功", id);
         }
         return result;
     }
@@ -181,7 +187,7 @@ public class FileService {
         User user = userService.getUser(userId);
         String username = user.getUsername();
 
-        System.out.println(uploadFile.getOriginalFilename()+" 文件大小："+uploadFile.getSize());
+//        System.out.println(uploadFile.getOriginalFilename()+" 文件大小："+uploadFile.getSize());
         // .getName():uploadFile  getOriginalFilename():文件名.xxx
         String fileLinkId;
         String msg;
@@ -194,11 +200,11 @@ public class FileService {
             Result fileResult = storeFile(uploadFile, uploadFile.getOriginalFilename());
             String fileId = (String) fileResult.getData();
 
-            System.out.println(fileLinkPath);
             // 添加FileLInk记录
             FileLink fileLink = fileLinkService.insertFileLink(fileId, hashType, hashCode, fileLinkPath, username);
             fileLinkId = fileLink.getId();
             msg = "文件不存在";
+            log.info("上传文件{}不存在，上传成功", uploadFile.getOriginalFilename());
         }else{
             // True: 文件存在，查询链接，返回linkId
             FileLink fileLink = fileLinkService.findFileLinkByHashCode(hashCode);
@@ -206,6 +212,7 @@ public class FileService {
             // 添加链接数和用户名
             fileLinkService.appendFileLink(hashCode, username);
             msg = "文件已存在";
+            log.info("上传文件{}已存在，链接文件", uploadFile.getOriginalFilename());
         }
         HashMap<String, String> map = new HashMap<>();
         map.put("fileLinkId",fileLinkId);
@@ -235,15 +242,16 @@ public class FileService {
 
         // 获取fileLinkId并从path中删除该文件
         String fileLinkId = pathService.deleteFile(user.getPathId(), filename, pathList);
-        System.out.println(fileLinkId);
         if(fileLinkId==null){
             return Result.error(500, "文件或目录不正确");
         }
         // 更新链接文件
         Result result = fileLinkService.deleteFileLinkUpdate(fileLinkId, user.getUsername());
         if(result.getCode() != 200){
+            log.warn("删除文件{}失败", filename);
             return Result.error(500, "删除链接文件失败");
         }
+        log.info("删除文件{}成功", filename);
         return result;
     }
 
