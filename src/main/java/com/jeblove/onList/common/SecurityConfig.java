@@ -34,6 +34,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Value("${app.security.salt}")
     private String salt;
 
+    @Value("${app.security.enabled}")
+    private boolean securityEnabled;
+
     /**
      * 配置身份验证
      * @param auth
@@ -51,16 +54,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         // 设置允许跨域请求
         http.cors().and().csrf().disable();
-        // 添加我们自定义的 JwtAuthenticationFilter
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        // 以确保使用无状态的认证方式；请求授权配置
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeRequests()
-                // 排除登录路径
-                .antMatchers("/user/login").anonymous()
-                .antMatchers("/user/register").anonymous()
-                .anyRequest().authenticated();
+        if (securityEnabled){
+            // 添加自定义的 JwtAuthenticationFilter
+            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            // 以确保使用无状态的认证方式；请求授权配置
+            http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                    .and()
+                    .authorizeRequests()
+                    // 排除登录路径
+                    .antMatchers("/user/login").anonymous()
+                    .antMatchers("/user/register").anonymous()
+                    .anyRequest().authenticated();
+        }else{
+            // 开发环境下的配置，禁用安全控制，允许所有请求通过
+            http.authorizeRequests().anyRequest().permitAll();
+        }
     }
 
     @Bean
