@@ -6,20 +6,25 @@ import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.Path;
 import com.jeblove.onList.entity.User;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -101,7 +106,8 @@ public class UserService {
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("token", token);
             resultMap.put("userId", getUserIdByUsername(userDetails.getUsername()));
-
+            List<User> users = mongoTemplate.findAll(User.class);
+            System.out.println(users);
             return Result.success(resultMap);
         }catch (AuthenticationException e){
             return Result.error(502, "登录失败："+e.getMessage());
@@ -169,7 +175,10 @@ public class UserService {
 
         // 权限
         Map<String, Object> permissions = new HashMap<>();
-        permissions.put("disabled",1);
+        // 0为启用
+        permissions.put("disabled",0);
+        // role=0为管理员，1为普通用户
+        permissions.put("role",1);
         user.setPermissions(permissions);
 
         User insert = mongoTemplate.insert(user);
@@ -200,12 +209,74 @@ public class UserService {
                     result = Result.success(deletedCount);
                 }
             }
-
         }else{
             result = login;
         }
         return result;
-
     }
 
+    /**
+     * 修改user [api]
+     * 管理员可修改username、password、pathId、permissions.role，需要参数user中包含目标id
+     * 用户仅能修改自己username、password
+     * @param username 登录用户名
+     * @param password 登录密码
+     * @param user 修改参数
+     * @return 200成功条数， 502失败
+     */
+    public Result modifyUser(String username, String password, User user){
+        User loginUser = mongoTemplate.findOne(new Query(Criteria.where("username").is(username)), User.class);
+
+        Result login = loginSecurity(username, password);
+        if (login.getCode() == 200){
+            Query query;
+            Update update = new Update();
+
+            Integer loginUserRole = (Integer) loginUser.getPermissions().get("role");
+            if (loginUserRole == 0) {
+                // 管理员，可修改pathId、role
+                String newPathId = user.getPathId();
+                Integer newRole = (Integer) user.getPermissions().get("role");
+                if (ObjectUtils.isEmpty(newPathId)) {
+                    update.set("pathId", newPathId);
+                }
+                if (newRole != null) {
+                    update.set("permissions.role", newRole);
+                }
+                // 管理员账号修改的是根据参数user中的id
+                query = new Query(Criteria.where("_id").is(user.getId()));
+            }else{
+                if (loginUser.getId().equals(user.getId())){
+                    // 非管理员只能修改自己账号
+                    query = new Query(Criteria.where("_id").is(loginUser.getId()));
+                }else{
+                    return Result.error(502, "普通用户，仅能修改自己账号");
+                }
+            }
+            String newUsername = user.getUsername();
+            String newPassword = user.getPassword();
+            if (ObjectUtils.isEmpty(newUsername)){
+                update.set("username", newUsername);
+            }
+            if (ObjectUtils.isEmpty(newPassword)) {
+                update.set("password", passwordEncoder.encode(newPassword));
+            }
+
+            UpdateResult updateResult = mongoTemplate.updateFirst(query, update, User.class);
+            System.out.println(updateResult);
+            return Result.success(updateResult.getModifiedCount());
+        }else{
+            return Result.error(502, "用户或密码错误");
+        }
+    }
+
+    /**
+     * 获取用户列表 [api]
+     * @return List<User>
+     */
+    public List<User> getAllUserInfo(){
+        List<User> users = mongoTemplate.findAll(User.class);
+        System.out.println(users);
+        return users;
+    }
 }

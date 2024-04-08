@@ -55,4 +55,14 @@ public class UserController {
     public Result deleteUser(String id, String password){
         return userService.deleteUser(id, password);
     }
+
+    @RequestMapping("modifyUser")
+    public Result modifyUser(String username, String password, User user){
+        return userService.modifyUser(username, password, user);
+    }
+
+    @RequestMapping("getAllUserInfo")
+    public Result getAllUserInfo(){
+        return Result.success(userService.getAllUserInfo());
+    }
 }
