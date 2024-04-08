@@ -6,6 +6,7 @@ import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.User;
 import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
+import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.bson.types.ObjectId;
@@ -30,6 +31,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author : Jeb
@@ -265,4 +267,40 @@ public class FileService {
         return Result.success(formattedTotalSize);
     }
 
+    /**
+     * 获取文件信息
+     * @param id 文件id
+     * @return 文件信息
+     */
+    public GridFSFile getFileInfoById(String id){
+        GridFSFile gridFSFile = gridFsTemplate.findOne(new Query(Criteria.where("_id").is(id)));
+        return gridFSFile;
+    }
+
+    /**
+     * 获取文件指定信息
+     * @return List<Map<String, Object>> 包含所有文件详细信息的列表，其中每个Map对象代表一个文件的信息：
+     * <ul>
+     *   <li>"id" - 文件的ObjectId，以字符串形式返回</li>
+     *   <li>"filename" - 文件的名称</li>
+     *   <li>"chunkSize" - 文件的分块大小（以字节为单位）</li>
+     *   <li>"uploadDate" - 文件的上传日期时间</li>
+     * </ul>
+     */
+    public List<Map<Object, Object>> getAllFileInfo(){
+        Query query = new Query();
+        GridFSFindIterable files = gridFsTemplate.find(query);
+
+        List<Map<Object, Object>> mapList = new ArrayList<>();
+        for (GridFSFile file: files){
+            HashMap<Object, Object> map = new HashMap<>();
+            // 正常输出_id
+            map.put("id", file.getId().asObjectId().getValue().toHexString());
+            map.put("filename", file.getFilename());
+            map.put("chunkSize", file.getChunkSize());
+            map.put("uploadDate", file.getUploadDate());
+            mapList.add(map);
+        }
+        return mapList;
+    }
 }

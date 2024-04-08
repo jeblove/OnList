@@ -201,4 +201,8 @@ public class FileController {
         return fileService.queryTotalSize();
     }
 
+    @RequestMapping("getAllFileInfo")
+    public Result getAllFileInfo() {
+        return Result.success(fileService.getAllFileInfo());
+    }
 }
