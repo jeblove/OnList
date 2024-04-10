@@ -40,4 +40,6 @@ app:
   security:
     salt: onList
     # 开发测试时false为关闭接口验证
-    enabled: true
+    enabled: false
+  share:
+    downloadPrefix: download
