@@ -1,12 +1,8 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost
-#      database: test
+      uri: mongodb://localhost:27017
       database: onList
-#      username:
-#      password:
-      port: 27017
   servlet:
     multipart:
       enabled: true
@@ -43,3 +39,5 @@ app:
     enabled: false
   share:
     downloadPrefix: download
+  backup:
+    dir: backups/
