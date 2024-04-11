@@ -57,12 +57,22 @@ public class UserController {
     }
 
     @RequestMapping("modifyUser")
-    public Result modifyUser(String username, String password, User user){
-        return userService.modifyUser(username, password, user);
+    public Result modifyUser(String loginId, User user){
+        return userService.modifyUser(loginId, user);
     }
 
     @RequestMapping("getAllUserInfo")
     public Result getAllUserInfo(){
         return Result.success(userService.getAllUserInfo());
+    }
+
+    @RequestMapping("adminDeleteUser")
+    public Result adminDeleteUser(String loginId, String userId){
+        if (userService.adminDeleteUser(loginId, userId)){
+            return Result.success(true);
+        }else{
+            return Result.error(502, "删除用户失败");
+        }
+
     }
 }

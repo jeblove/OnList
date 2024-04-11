@@ -8,6 +8,7 @@ import com.jeblove.onList.entity.User;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -145,18 +146,20 @@ public class UserService {
             if (!user.getEmail().matches(regexEmail)) {
                 return Result.error(500, "邮箱信息异常！");
             }
-        } else {
-            return emptyError;
         }
+//        else {
+//            return emptyError;
+//        }
 
         if (user.getPhone() != null && !user.getPhone().isEmpty()) {
             String regexPhoneNum = "\\d{11}";
             if (!user.getPhone().matches(regexPhoneNum)) {
                 return Result.error(500, "手机号位数不正确！");
             }
-        } else {
-            return emptyError;
         }
+//        else {
+//            return emptyError;
+//        }
 
         // 时间
 //        LocalDateTime currentTime = LocalDateTime.now();
@@ -168,9 +171,16 @@ public class UserService {
         Date date = new Date();
         user.setSignUpTime(date);
 
-        // 用户home目录，并添加初始文件
-        Path path = pathService.insertPath(initFilename, initFileLinkId);
-        user.setPathId(path.getId());
+        String getPathId = user.getPathId();
+        String pathId;
+        if (getPathId !=null && !ObjectUtils.isEmpty(getPathId)) {
+            pathId = getPathId;
+        }else{
+            // 用户home目录，并添加初始文件
+            Path path = pathService.insertPath(initFilename, initFileLinkId);
+            pathId = path.getId();
+        }
+        user.setPathId(pathId);
 
         // 密码加密
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -179,13 +189,27 @@ public class UserService {
         FileLink fileLink = fileLinkService.getFileLinkById(initFileLinkId);
         fileLinkService.appendFileLink(fileLink.getHashCode(), user.getUsername());
 
+        Map<String, Object> permissions = user.getPermissions();
         // 权限
-        Map<String, Object> permissions = new HashMap<>();
-        // 0为启用
-        permissions.put("disabled",0);
-        // role=0为管理员，1为普通用户
-        permissions.put("role",1);
-        user.setPermissions(permissions);
+        Map<String, Object> newPermissions = new HashMap<>();
+        if (permissions!=null && !permissions.isEmpty()) {
+            if (permissions.containsKey("role")){
+                Integer newRole = Integer.parseInt(permissions.get("role").toString());
+                newPermissions.put("role", newRole);
+            }
+
+            if (permissions.containsKey("disabled")){
+                Integer newDisabled = Integer.parseInt(permissions.get("disabled").toString());
+                newPermissions.put("disabled", newDisabled);
+            }
+        }else{
+            // 0为启用
+            newPermissions.put("disabled",0);
+            // role=0为管理员，1为普通用户
+            newPermissions.put("role",1);
+        }
+        user.setPermissions(newPermissions);
+
 
         User insert = mongoTemplate.insert(user);
 //        System.out.println(insert);
@@ -207,18 +231,12 @@ public class UserService {
         }
         Result login = login(user.getUsername(), password);
         if(login.getCode() == 200){
-            DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(id)), User.class);
-            long deletedCount = deleteResult.getDeletedCount();
-            if(deletedCount>0){
-                // 删除用户目录
-                long removePath = pathService.removePath(user.getPathId(), user.getUsername());
-                if(removePath!=0){
-                    result = Result.success(deletedCount);
-                }
+            boolean execDeleteUser = execDeleteUser(user);
+            if (execDeleteUser) {
+                result = Result.success("删除用户成功");
             }
-            log.info("删除用户{}成功", id);
         }else{
-            log.info("删除用户{}失败", id);
+//            log.info("删除用户{}失败", id);
             result = login;
         }
         return result;
@@ -228,33 +246,50 @@ public class UserService {
      * 修改user [api]
      * 管理员可修改username、password、pathId、permissions.role，需要参数user中包含目标id
      * 用户仅能修改自己username、password
-     * @param username 登录用户名
-     * @param password 登录密码
+     * @param loginId 登录userId
      * @param user 修改参数
-     * @return 200成功条数， 502失败
+     * @return code200成功条数， 502失败
      */
-    public Result modifyUser(String username, String password, User user){
-        User loginUser = mongoTemplate.findOne(new Query(Criteria.where("username").is(username)), User.class);
+    public Result modifyUser(String loginId, User user){
+        User loginUser = mongoTemplate.findOne(new Query(Criteria.where("_id").is(loginId)), User.class);
 
-        Result login = loginSecurity(username, password);
-        if (login.getCode() == 200){
+        String userId;
+        Map<String, Object> loginUserPermissions = loginUser.getPermissions();
+        if (loginUserPermissions == null) {
+            return Result.error(502, "用户错误");
+        }
+        if ((Integer)loginUserPermissions.get("role") == 0){
             Query query;
             Update update = new Update();
-            String userId;
 
             Integer loginUserRole = (Integer) loginUser.getPermissions().get("role");
             if (loginUserRole == 0) {
                 // 管理员，可修改pathId、role
                 String newPathId = user.getPathId();
-                Integer newRole = (Integer) user.getPermissions().get("role");
-                if (ObjectUtils.isEmpty(newPathId)) {
+
+                // 是否修改permissions
+                Map<String, Object> permissions = user.getPermissions();
+                if (permissions!=null && !permissions.isEmpty()) {
+                    if (permissions.containsKey("role")){
+                        Integer newRole = Integer.parseInt(permissions.get("role").toString());
+                        update.set("permissions.role", newRole);
+                    }
+
+                    if (permissions.containsKey("disabled")){
+                        Integer newDisabled = Integer.parseInt(permissions.get("disabled").toString());
+                        update.set("permissions.disabled", newDisabled);
+                    }
+                }
+                if (newPathId !=null && !ObjectUtils.isEmpty(newPathId)) {
                     update.set("pathId", newPathId);
                 }
-                if (newRole != null) {
-                    update.set("permissions.role", newRole);
-                }
+
                 // 管理员账号修改的是根据参数user中的id
-                userId = user.getId();
+                if (user.getId() != null) {
+                    userId = user.getId();
+                }else{
+                    userId = loginUser.getId();
+                }
             }else{
                 if (loginUser.getId().equals(user.getId())){
                     // 非管理员只能修改自己账号
@@ -266,13 +301,18 @@ public class UserService {
             query = new Query(Criteria.where("_id").is(userId));
             String newUsername = user.getUsername();
             String newPassword = user.getPassword();
-            if (ObjectUtils.isEmpty(newUsername)){
+            if (!ObjectUtils.isEmpty(newUsername)){
                 update.set("username", newUsername);
             }
-            if (ObjectUtils.isEmpty(newPassword)) {
+            if (!ObjectUtils.isEmpty(newPassword)) {
                 update.set("password", passwordEncoder.encode(newPassword));
             }
 
+            Document updateObject = update.getUpdateObject();
+            if (updateObject.isEmpty()){
+                log.warn("修改参数为空");
+                return Result.error(502, "修改参数为空");
+            }
             UpdateResult updateResult = mongoTemplate.updateFirst(query, update, User.class);
             log.info("修改用户{}成功", userId);
             return Result.success(updateResult.getModifiedCount());
@@ -290,5 +330,47 @@ public class UserService {
         List<User> users = mongoTemplate.findAll(User.class);
         log.debug("获取用户列表: {}", users);
         return users;
+    }
+
+    /**
+     * 执行删除用户
+     * @param user 用户实体(需要含有id和pathId)
+     * @return boolean
+     */
+    public boolean execDeleteUser(User user){
+        DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(user.getId())), User.class);
+        long deletedCount = deleteResult.getDeletedCount();
+        if(deletedCount>0){
+            log.info("删除用户{}成功", user.getUsername());
+            // 删除用户目录
+            long removePath = pathService.removePath(user.getPathId(), user.getUsername());
+            if(removePath!=0){
+                log.info("删除用户{}目录成功", user.getUsername());
+                return true;
+            }
+        }
+        log.info("删除用户{}失败", user.getUsername());
+        return false;
+    }
+
+    /**
+     * 管理员删除用户
+     * @param loginId 管理员userId
+     * @param userId 删除目标userId
+     * @return boolean
+     */
+    public boolean adminDeleteUser(String loginId, String userId){
+        User loginUser = mongoTemplate.findOne(new Query(Criteria.where("_id").is(loginId)), User.class);
+
+        Map<String, Object> loginUserPermissions = loginUser.getPermissions();
+        if (loginUserPermissions == null) {
+            return false;
+        }
+        if ((Integer)loginUserPermissions.get("role") == 0){
+            // 管理员
+            User user = mongoTemplate.findOne(new Query(Criteria.where("_id").is(userId)), User.class);
+            return execDeleteUser(user);
+        }
+        return false;
     }
 }
