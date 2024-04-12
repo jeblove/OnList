@@ -30,8 +30,8 @@ public class ShareLinkController {
     private ShareLinkService shareLinkService;
 
     @RequestMapping("createShareLink")
-    public Result createShareLink(String fileLinkId, Integer expireDuration, Integer visitLimit, HttpServletRequest request) {
-        String username = request.getHeader("username");
+    public Result createShareLink(String username, String fileLinkId, Integer expireDuration, Integer visitLimit, HttpServletRequest request) {
+//        String username = request.getHeader("username");
         ShareLink shareLink = shareLinkService.createShareLink(username, fileLinkId, expireDuration, visitLimit);
 
         return Result.success(shareLink);
@@ -50,5 +50,16 @@ public class ShareLinkController {
         return downloadResponse;
     }
 
+    @RequestMapping("/getAllShareInfo")
+    public Result getAllShareInfo(){
+        return Result.success(shareLinkService.getAllShareInfo());
+    }
 
+    @RequestMapping("/deleteShareLink")
+    public Result deleteShareLink(String id){
+        if (shareLinkService.deleteShareLink(id)){
+            return Result.success(true);
+        }
+        return Result.error(502, "删除分享失败");
+    }
 }

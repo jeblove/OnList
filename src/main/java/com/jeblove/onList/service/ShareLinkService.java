@@ -2,9 +2,12 @@ package com.jeblove.onList.service;
 
 import com.jeblove.onList.entity.FileLink;
 import com.jeblove.onList.entity.ShareLink;
+import com.mongodb.client.result.DeleteResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -12,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * @author : Jeb
@@ -50,7 +54,7 @@ public class ShareLinkService {
         shareLink.setVisits(0);
         shareLink.setUsername(username);
         ShareLink insert = mongoTemplate.insert(shareLink);
-        insert.setDownloadUrl("/"+downloadPrefix+"/" + insert.getId());
+        insert.setDownloadUrl("/share/"+downloadPrefix+"/" + insert.getId());
         // 让数据库自动生成id确认下载链接，再重新写入
         ShareLink save = mongoTemplate.save(insert);
         log.info("用户{}分享了{}文件", username, fileLinkId);
@@ -93,5 +97,31 @@ public class ShareLinkService {
         String fileLinkId = shareLink.getFileLinkId();
         FileLink fileLink = fileLinkService.getFileLinkById(fileLinkId);
         return fileService.downloadFileById(fileLink.getFileId());
+    }
+
+    /**
+     * 获取分享列表 [api]
+     * @return List<ShareLink>
+     */
+    public List<ShareLink> getAllShareInfo(){
+        List<ShareLink> shareLinks = mongoTemplate.findAll(ShareLink.class);
+        log.debug("获取分享列表: {}", shareLinks);
+        return shareLinks;
+    }
+
+    /**
+     * 删除分享
+     * @param id ShareLinkId
+     * @return boolean
+     */
+    public boolean deleteShareLink(String id){
+        DeleteResult deleteResult = mongoTemplate.remove(new Query(Criteria.where("_id").is(id)), ShareLink.class);
+        long deletedCount = deleteResult.getDeletedCount();
+        if (deletedCount>0){
+            log.info("删除分享{}成功", id);
+            return true;
+        }
+        log.info("删除分享{}失败", id);
+        return false;
     }
 }
