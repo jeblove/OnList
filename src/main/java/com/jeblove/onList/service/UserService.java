@@ -373,4 +373,21 @@ public class UserService {
         }
         return false;
     }
+
+    /**
+     * 检测该用户是否管理员
+     * @param userId 用户ID
+     * @return boolean
+     */
+    public boolean isAdmin(String userId){
+        User user = mongoTemplate.findOne(new Query(Criteria.where("_id").is(userId)), User.class);
+        Map<String, Object> userPermissions = user.getPermissions();
+        if (userPermissions == null) {
+            return false;
+        }
+        if ((Integer)userPermissions.get("role") == 0){
+            return true;
+        }
+        return false;
+    }
 }

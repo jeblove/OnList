@@ -73,6 +73,10 @@ public class UserController {
         }else{
             return Result.error(502, "删除用户失败");
         }
+    }
 
+    @RequestMapping("isAdmin")
+    public Result isAdmin(String userId){
+        return Result.success(userService.isAdmin(userId));
     }
 }
