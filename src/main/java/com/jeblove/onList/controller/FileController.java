@@ -70,7 +70,7 @@ public class FileController {
     }
 
     /**
-     * 下载文件
+     * 下载文件[api]
      * @param fileLinkId 文件链接id
      * @return 文件流
      * @throws IOException

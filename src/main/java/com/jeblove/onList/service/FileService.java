@@ -305,7 +305,7 @@ public class FileService {
             // 正常输出_id
             map.put("id", file.getId().asObjectId().getValue().toHexString());
             map.put("filename", file.getFilename());
-            map.put("chunkSize", file.getChunkSize());
+            map.put("length", file.getLength());
             map.put("uploadDate", file.getUploadDate());
             mapList.add(map);
         }
