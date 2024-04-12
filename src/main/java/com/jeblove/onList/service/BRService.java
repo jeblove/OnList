@@ -46,7 +46,7 @@ public class BRService {
     public String backupMongoDatabase() throws IOException, InterruptedException {
         LocalDateTime currentDateTime = LocalDateTime.now(); // 获取当前日期和时间
         // 格式化日期时间
-        String formattedDateTime = currentDateTime.format(DateTimeFormatter.ofPattern("yyMMdd_HH-mm"));
+        String formattedDateTime = currentDateTime.format(DateTimeFormatter.ofPattern("yyMMdd_HH-mm-ss"));
         String backupFileName = "mongo_backup_" + formattedDateTime + ".gz";
         // 备份路径
         Path backupFilePath = Paths.get(System.getProperty("user.dir"), backupDir, backupFileName);
@@ -76,11 +76,12 @@ public class BRService {
     /**
      * 恢复mongo数据库
      * @param backupFileName 备份文件名
+     * @param drop boolean 是否删除所有数据再恢复
      * @return true or false
      * @throws IOException
      * @throws InterruptedException
      */
-    public boolean restoreMongoDatabase(String backupFileName) throws IOException, InterruptedException {
+    public boolean restoreMongoDatabase(String backupFileName, boolean drop) throws IOException, InterruptedException {
         Path backupFilePath = Paths.get(System.getProperty("user.dir"), backupDir, backupFileName);
 
         // 检查备份文件是否存在
@@ -88,14 +89,18 @@ public class BRService {
             log.error("指定的备份文件不存在: {}", backupFileName);
             return false;
         }
-
-        ProcessBuilder pb = new ProcessBuilder(Arrays.asList(
+        List<String> commandArguments = new ArrayList<>(Arrays.asList(
                 "mongorestore",
                 "--uri", mongoUri,
                 "--db", database,
-                "--archive="+ backupFilePath,
-                "--gzip"
+                "--gzip",
+                "--archive=" + backupFilePath
         ));
+        if (drop) {
+            commandArguments.add("--drop");
+        }
+
+        ProcessBuilder pb = new ProcessBuilder(commandArguments);
         Process process = pb.start();
 
         // 输出打印
@@ -128,7 +133,7 @@ public class BRService {
             log.error("MongoDB恢复失败: {}", exitCode);
             return false;
         }
-        log.info("从{}恢复MongoDB: {}文档成功， {}文档失败", backupFileName, successCount, failureCount);
+        log.info("从文件{}|drop参数{}, 恢复MongoDB: {}文档成功, {}文档失败", backupFileName, drop, successCount, failureCount);
         return true;
     }
 
@@ -176,6 +181,7 @@ public class BRService {
         String originalFileName = file.getOriginalFilename();
 
         File destFile = new File(backupFolderPath + File.separator + originalFileName);
+        log.info("上传备份文件{}", originalFileName);
         file.transferTo(destFile);
     }
 
@@ -197,6 +203,25 @@ public class BRService {
         // 读取文件内容并返回
         try (FileInputStream fis = new FileInputStream(file)) {
             return FileCopyUtils.copyToByteArray(fis);
+        }
+    }
+
+    /**
+     * 删除备份文件
+     * @param filename 文件名
+     * @return boolean
+     */
+    public boolean deleteBackup(String filename) {
+        String rootPath = System.getProperty("user.dir");
+        String backupFolderPath = rootPath + File.separator + backupDir;
+        File targetFile = new File(backupFolderPath, filename);
+
+        if (targetFile.exists() && targetFile.isFile()) {
+            log.info("删除备份{}成功", filename);
+            return targetFile.delete();
+        } else {
+            log.error("指定的备份文件 {} 不存在", filename);
+            return false;
         }
     }
 

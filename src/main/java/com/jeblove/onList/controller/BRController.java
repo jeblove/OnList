@@ -40,9 +40,9 @@ public class BRController {
     }
 
     @PostMapping("/restore")
-    public Result restoreDatabase(String filename) {
+    public Result restoreDatabase(String filename, boolean drop) {
         try {
-            boolean backupSuccess = brService.restoreMongoDatabase(filename);
+            boolean backupSuccess = brService.restoreMongoDatabase(filename, drop);
             return Result.success(backupSuccess);
         } catch (IOException | InterruptedException e) {
             // 备份异常
@@ -81,5 +81,13 @@ public class BRController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+    }
+
+    @RequestMapping("/deleteBackup")
+    public Result deleteBackup(String filename){
+        if (brService.deleteBackup(filename)){
+            return Result.success(true);
+        }
+        return Result.error(502, "删除失败");
     }
 }
