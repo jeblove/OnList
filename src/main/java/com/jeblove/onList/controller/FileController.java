@@ -127,7 +127,7 @@ public class FileController {
     }
 
     /**
-     * 拷贝文件
+     * 复制文件
      * api
      * @param userId 用户id
      * @param filename 文件名
@@ -139,7 +139,7 @@ public class FileController {
     public Result cpFile(String userId, String filename,@RequestParam List<String> pathList,@RequestParam List<String> targetPathList){
         User user = userService.getUser(userId);
         long count = pathService.copyAMoveFile(false, user.getPathId(), user.getUsername(), filename, pathList, filename, targetPathList);
-        Result result = Result.error(500, "拷贝失败");
+        Result result = Result.error(500, "复制失败");
         if(count>0){
             result = Result.success(count);
         }
