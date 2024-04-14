@@ -26,8 +26,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -153,6 +156,8 @@ public class FileService {
             GridFSDownloadStream gridFSDownloadStream = gridFSBucket.openDownloadStream(gridFSFile.getObjectId());
 //            创建resource，用于获取流对象
             GridFsResource resource = new GridFsResource(gridFSFile, gridFSDownloadStream);
+            // 对文件名进行URL编码处理
+            String encodedFilename = URLEncoder.encode(gridFSFile.getFilename(), StandardCharsets.UTF_8.name());
 //            获取流中的数据
             StreamingResponseBody streamingResponseBody = outputStream -> {
                 IOUtils.copy(resource.getInputStream(), outputStream);
@@ -168,7 +173,7 @@ public class FileService {
              *  APPLICATION_OCTET_STREAM 告知浏览器是字节流，浏览器处理字节流默认方式是下载
              */
             responseEntity = ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename="+gridFSFile.getFilename())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFilename + "\"") // 修改处
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(streamingResponseBody);
         }
