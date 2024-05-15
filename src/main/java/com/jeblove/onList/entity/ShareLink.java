@@ -26,7 +26,13 @@ public class ShareLink {
 
     // 是否已过期
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expireTime);
+        boolean timeAfter = LocalDateTime.now().isAfter(expireTime);
+        if (timeAfter || visits >= visitLimit){
+            return true;
+        }else{
+            return false;
+        }
+//        return LocalDateTime.now().isAfter(expireTime);
     }
 
     // 是否达到访问上限
