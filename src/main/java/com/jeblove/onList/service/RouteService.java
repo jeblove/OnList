@@ -6,9 +6,11 @@ import com.jeblove.onList.common.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
+
 import javax.annotation.Resource;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +101,7 @@ public class RouteService {
     public void updateRedisValue(String userId){
         log.debug("更新redis");
         String pathId = userService.getUser(userId).getPathId();
-
+        redisTemplate.delete(pathId);
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
 
         Result pathResult = pathService.getRoute(pathId, "/");
@@ -119,5 +121,16 @@ public class RouteService {
             ops.set(userId, cacheValue, 5, TimeUnit.MINUTES);
         }
 
+    }
+
+    /**
+     * 清空redis缓存
+     */
+    public void flushRedisDatabase(){
+        redisTemplate.execute((RedisConnection connection) -> {
+            connection.flushDb();
+            return "Flushed DB";
+        });
+        log.info("清空redis");
     }
 }
