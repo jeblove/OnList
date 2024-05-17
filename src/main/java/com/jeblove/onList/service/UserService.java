@@ -142,7 +142,7 @@ public class UserService {
         }
 
         if (user.getEmail() != null && !user.getEmail().isEmpty()) {
-            String regexEmail = "\\@";
+            String regexEmail = ".+@.+\\..+";
             if (!user.getEmail().matches(regexEmail)) {
                 return Result.error(500, "邮箱信息异常！");
             }
