@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +36,9 @@ public class BRService {
 
     @Value("${spring.data.mongodb.database}")
     private String database;
+
+    @Resource
+    private RouteService routeService;
 
     /**
      * 备份mongo数据库
@@ -133,6 +137,7 @@ public class BRService {
             log.error("MongoDB恢复失败: {}", exitCode);
             return false;
         }
+        routeService.flushRedisDatabase();
         log.info("从文件{}|drop参数{}, 恢复MongoDB: {}文档成功, {}文档失败", backupFileName, drop, successCount, failureCount);
         return true;
     }
