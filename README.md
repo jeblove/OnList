@@ -29,7 +29,7 @@ Springboot+Vue3+MongoDB
 
 ---
 
-### 操作
+### 文件特性
 
 复制文件，会在fileLink更新文件、用户链接数，标记哪些用户拥有多少个该文件；
 
@@ -37,13 +37,38 @@ Springboot+Vue3+MongoDB
 
 ---
 
+### 安装
+
+#### 数据库
+
+- 具有redis、mongo(gridfs)数据库
+  （开发环境mongodb v6.0.5）
+
+使用数据库工具[mongorestore](https://www.mongodb.com/zh-cn/docs/database-tools/installation/installation/)导入初始数据库，输入命令
+
+```bash
+mongorestore --uri mongodb://localhost:27017 --db onList --drop --gzip --archive=mongo_init_240521_23-37-18.gz
+```
+
+前端
+
+```bash
+npm run dev
+```
+
+---
+
 测试账号密码
+
+管理员
 
 username: hans2
 password: 123456
 
-username: jeb
-password: 123456
+用户
+
+username: test
+password: 123
 
 ---
 
